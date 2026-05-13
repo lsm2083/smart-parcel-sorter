@@ -61,7 +61,7 @@ def start_camera():
         # QR 박스 표시
         # -----------------
         if bbox is not None:
-            bbox = bbox.astype(int)
+            points = bbox[0]
 
             for i in range(len(bbox[0])):
                 pt1 = tuple(bbox[0][i])
@@ -71,7 +71,7 @@ def start_camera():
             cv2.putText(
                 frame,
                 "QR Detected",
-                (bbox[0][0][0], bbox[0][0][1] - 10),
+                tuple(points[0]),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
                 (0, 255, 0),

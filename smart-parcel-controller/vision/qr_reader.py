@@ -1,23 +1,25 @@
-import cv2
-
-detector = cv2.QRCodeDetector()
+from pyzbar.pyzbar import decode
 
 
 def detect_qr(frame):
-    if frame is None:
-        return None, None
 
-    if frame.size == 0:
-        return None, None
+    decoded_objects = decode(frame)
 
-    try:
-        data, bbox, _ = detector.detectAndDecode(frame)
+    for obj in decoded_objects:
 
-        if data:
-            return data, bbox
+        try:
+            data = obj.data.decode("utf-8")
 
-        return None, None
+        except:
+            data = obj.data.decode("cp949")
 
-    except cv2.error as e:
-        print("QR 인식 중 오류:", e)
-        return None, None
+        points = obj.polygon
+
+        bbox = []
+
+        for point in points:
+            bbox.append([point.x, point.y])
+
+        return data, [bbox]
+
+    return None, None
