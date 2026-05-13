@@ -36,7 +36,7 @@ def detect_ocr(frame):
         texts.append(text)
         confidences.append(confidence)
 
-    full_text = " ".join(texts)
+    full_text = "\n".join(texts)
 
     avg_confidence = 0.0
     if confidences:
