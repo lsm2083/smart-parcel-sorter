@@ -1,0 +1,425 @@
+<UserControl x:Class="MasterAdmin.FieldPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:MasterAdmin"
+             mc:Ignorable="d"
+             Background="Transparent">
+  <UserControl.Resources>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background"   Value="#1E2A3A"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding"      Value="14"/>
+      <Setter Property="Margin"       Value="4"/>
+    </Style>
+
+    <Style x:Key="SecTitle" TargetType="TextBlock">
+      <Setter Property="FontSize"   Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#94A3B8"/>
+      <Setter Property="Margin"     Value="0,0,0,8"/>
+    </Style>
+
+    <Style x:Key="BigNum" TargetType="TextBlock">
+      <Setter Property="FontSize"   Value="26"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="#F1F5F9"/>
+    </Style>
+
+    <Style x:Key="SubLabel" TargetType="TextBlock">
+      <Setter Property="FontSize"   Value="11"/>
+      <Setter Property="Foreground" Value="#64748B"/>
+      <Setter Property="Margin"     Value="0,2,0,0"/>
+    </Style>
+
+    <Style x:Key="DG" TargetType="DataGrid">
+      <Setter Property="Background"               Value="Transparent"/>
+      <Setter Property="Foreground"               Value="#CBD5E1"/>
+      <Setter Property="BorderThickness"          Value="0"/>
+      <Setter Property="RowBackground"            Value="Transparent"/>
+      <Setter Property="AlternatingRowBackground" Value="#0F1923"/>
+      <Setter Property="GridLinesVisibility"      Value="Horizontal"/>
+      <Setter Property="HorizontalGridLinesBrush" Value="#1E3A5F"/>
+      <Setter Property="ColumnHeaderHeight"       Value="30"/>
+      <Setter Property="RowHeight"                Value="28"/>
+      <Setter Property="FontSize"                 Value="11"/>
+      <Setter Property="SelectionMode"            Value="Single"/>
+      <Setter Property="AutoGenerateColumns"      Value="False"/>
+      <Setter Property="IsReadOnly"               Value="True"/>
+      <Setter Property="CanUserResizeRows"        Value="False"/>
+      <Setter Property="CanUserAddRows"           Value="False"/>
+      <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+    </Style>
+
+    <Style x:Key="DGH" TargetType="DataGridColumnHeader">
+      <Setter Property="Background"      Value="#0F1923"/>
+      <Setter Property="Foreground"      Value="#64748B"/>
+      <Setter Property="FontSize"        Value="10"/>
+      <Setter Property="FontWeight"      Value="SemiBold"/>
+      <Setter Property="Padding"         Value="8,5"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="BorderBrush"     Value="#1E3A5F"/>
+    </Style>
+
+    <Style x:Key="SmallBtn" TargetType="Button">
+      <Setter Property="Background"      Value="#1E3A5F"/>
+      <Setter Property="Foreground"      Value="#94A3B8"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontSize"        Value="10"/>
+      <Setter Property="Padding"         Value="8,4"/>
+      <Setter Property="Cursor"          Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="{TemplateBinding Background}" CornerRadius="4"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- 통계 바 -->
+    <Grid Grid.Row="0" Margin="4,4,4,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="170"/>
+      </Grid.ColumnDefinitions>
+
+      <Border Grid.Column="0" Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="오늘 처리 건수" Style="{StaticResource SecTitle}"/>
+          <TextBlock Text="{Binding DeviceStatus.TodaySortedCount}" Style="{StaticResource BigNum}" Foreground="#38BDF8"/>
+          <TextBlock Text="박스" Style="{StaticResource SubLabel}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="분류 성공률" Style="{StaticResource SecTitle}"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding DeviceStatus.SuccessRate}" Style="{StaticResource BigNum}" Foreground="#4ADE80"/>
+            <TextBlock Text=" %" FontSize="16" Foreground="#4ADE80" VerticalAlignment="Bottom" Margin="1,0,0,3"/>
+          </StackPanel>
+          <TextBlock Text="인식 정확도" Style="{StaticResource SubLabel}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2" Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="오류 건수" Style="{StaticResource SecTitle}"/>
+          <TextBlock Text="{Binding DeviceStatus.TodayErrorCount}" Style="{StaticResource BigNum}" Foreground="#F87171"/>
+          <TextBlock Text="오늘 누적" Style="{StaticResource SubLabel}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="3" Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="컨베이어 속도" Style="{StaticResource SecTitle}"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding DeviceStatus.ConveyorSpeed}" Style="{StaticResource BigNum}" Foreground="#C084FC"/>
+            <TextBlock Text=" m/s" FontSize="13" Foreground="#C084FC" VerticalAlignment="Bottom" Margin="2,0,0,4"/>
+          </StackPanel>
+          <TextBlock Text="{Binding DeviceStatus.ConveyorStatus}" Style="{StaticResource SubLabel}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="4" Style="{StaticResource Card}">
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="비상정지" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
+          <Button Command="{Binding ToggleEmergencyCommand}"
+                  Background="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyColor}}"
+                  Height="52" Cursor="Hand" BorderThickness="0">
+            <Button.Template>
+              <ControlTemplate TargetType="Button">
+                <Border Background="{TemplateBinding Background}" CornerRadius="6">
+                  <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+              </ControlTemplate>
+            </Button.Template>
+            <StackPanel>
+              <TextBlock Text="⚠ 비상정지" Foreground="White" FontWeight="Bold"
+                         FontSize="13" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyText}}"
+                         Foreground="White" FontSize="10" Opacity="0.85" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- 카메라 + 로봇팔 -->
+    <Grid Grid.Row="1" Margin="4,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="230"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- QR 카메라 -->
+      <Border Grid.Column="0" Style="{StaticResource Card}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="145"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+            <Ellipse Width="7" Height="7" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,6,0">
+              <Ellipse.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                  <BeginStoryboard>
+                    <Storyboard RepeatBehavior="Forever">
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.2" Duration="0:0:1" AutoReverse="True"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </EventTrigger>
+              </Ellipse.Triggers>
+            </Ellipse>
+            <TextBlock Text="QR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+            <TextBlock Text="  LIVE" FontSize="10" Foreground="#4ADE80" VerticalAlignment="Center"/>
+          </StackPanel>
+          <Border Grid.Row="1" Background="#0A1628" CornerRadius="6" ClipToBounds="True">
+            <Grid>
+              <Rectangle Fill="#0D2137"/>
+              <Canvas>
+                <Rectangle Canvas.Top="0" Height="145" Width="2" Fill="#4ADE8055">
+                  <Rectangle.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                      <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever">
+                          <DoubleAnimation Storyboard.TargetProperty="(Canvas.Left)" From="0" To="500" Duration="0:0:2" AutoReverse="True"/>
+                        </Storyboard>
+                      </BeginStoryboard>
+                    </EventTrigger>
+                  </Rectangle.Triggers>
+                </Rectangle>
+              </Canvas>
+              <Grid Opacity="0.2" Margin="24">
+                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                <Border Grid.Row="0" Grid.Column="0" BorderBrush="#4ADE80" BorderThickness="2,2,0,0" Margin="8"/>
+                <Border Grid.Row="0" Grid.Column="2" BorderBrush="#4ADE80" BorderThickness="0,2,2,0" Margin="8"/>
+                <Border Grid.Row="2" Grid.Column="0" BorderBrush="#4ADE80" BorderThickness="2,0,0,2" Margin="8"/>
+                <Border Grid.Row="2" Grid.Column="2" BorderBrush="#4ADE80" BorderThickness="0,0,2,2" Margin="8"/>
+              </Grid>
+              <TextBlock Text="QR CAM" FontSize="11" FontFamily="Consolas"
+                         Foreground="#4ADE8066" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
+            <TextBlock Text="상태: " FontSize="10" Foreground="#64748B"/>
+            <TextBlock Text="{Binding DeviceStatus.QrCamStatus}" FontSize="10"
+                       Foreground="{Binding DeviceStatus.QrCamStatus, Converter={StaticResource StatusToColor}}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- OCR 카메라 -->
+      <Border Grid.Column="1" Style="{StaticResource Card}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="145"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+            <Ellipse Width="7" Height="7" Fill="#38BDF8" VerticalAlignment="Center" Margin="0,0,6,0">
+              <Ellipse.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                  <BeginStoryboard>
+                    <Storyboard RepeatBehavior="Forever">
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.2" Duration="0:0:0.8" AutoReverse="True"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </EventTrigger>
+              </Ellipse.Triggers>
+            </Ellipse>
+            <TextBlock Text="OCR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+            <TextBlock Text="  LIVE" FontSize="10" Foreground="#38BDF8" VerticalAlignment="Center"/>
+          </StackPanel>
+          <Border Grid.Row="1" Background="#0A1628" CornerRadius="6" ClipToBounds="True">
+            <Grid>
+              <Rectangle Fill="#0D1F35"/>
+              <Canvas>
+                <Rectangle Canvas.Left="0" Width="600" Height="2" Fill="#38BDF855" Canvas.Top="0">
+                  <Rectangle.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                      <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever">
+                          <DoubleAnimation Storyboard.TargetProperty="(Canvas.Top)" From="0" To="145" Duration="0:0:1.5" AutoReverse="True"/>
+                        </Storyboard>
+                      </BeginStoryboard>
+                    </EventTrigger>
+                  </Rectangle.Triggers>
+                </Rectangle>
+              </Canvas>
+              <StackPanel VerticalAlignment="Center" Margin="22,0">
+                <Rectangle Height="5" Fill="#38BDF822" Margin="0,5"    RadiusX="2" RadiusY="2"/>
+                <Rectangle Height="5" Fill="#38BDF833" Margin="18,5,0,5" RadiusX="2" RadiusY="2"/>
+                <Rectangle Height="5" Fill="#38BDF822" Margin="0,5"    RadiusX="2" RadiusY="2"/>
+                <Rectangle Height="5" Fill="#38BDF811" Margin="36,5,0,5" RadiusX="2" RadiusY="2"/>
+              </StackPanel>
+              <TextBlock Text="OCR CAM" FontSize="11" FontFamily="Consolas"
+                         Foreground="#38BDF866" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
+            <TextBlock Text="상태: " FontSize="10" Foreground="#64748B"/>
+            <TextBlock Text="{Binding DeviceStatus.OcrCamStatus}" FontSize="10"
+                       Foreground="{Binding DeviceStatus.OcrCamStatus, Converter={StaticResource StatusToColor}}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 로봇팔 -->
+      <Border Grid.Column="2" Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="로봇팔 상태" Style="{StaticResource SecTitle}"/>
+          <Border Background="#0A1628" CornerRadius="6" Height="145" Margin="0,0,0,10">
+            <Canvas>
+              <Rectangle Canvas.Left="85" Canvas.Top="118" Width="40" Height="8" Fill="#334155" RadiusX="2" RadiusY="2"/>
+              <Line X1="105" Y1="118" X2="82"  Y2="76"  Stroke="#38BDF8" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+              <Line X1="82"  Y1="76"  X2="125" Y2="44"  Stroke="#38BDF8" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+              <Line X1="125" Y1="44"  X2="158" Y2="34"  Stroke="#60A5FA" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+              <Ellipse Canvas.Left="98"  Canvas.Top="111" Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
+              <Ellipse Canvas.Left="75"  Canvas.Top="69"  Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
+              <Ellipse Canvas.Left="118" Canvas.Top="37"  Width="14" Height="14" Fill="#1E40AF" Stroke="#60A5FA" StrokeThickness="2"/>
+              <Line X1="158" Y1="34" X2="172" Y2="26" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+              <Line X1="158" Y1="34" X2="172" Y2="42" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            </Canvas>
+          </Border>
+          <Grid Margin="0,2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <TextBlock Text="로봇팔" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
+                       Text="{Binding DeviceStatus.RobotArmStatus}"
+                       Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
+          </Grid>
+          <Grid Margin="0,2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <TextBlock Text="투입부" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
+                       Text="{Binding DeviceStatus.InputUnitStatus}"
+                       Foreground="{Binding DeviceStatus.InputUnitStatus, Converter={StaticResource StatusToColor}}"/>
+          </Grid>
+          <Separator Background="#1E3A5F" Margin="0,5"/>
+          <Grid Margin="0,2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <TextBlock Text="비상정지" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
+                       Text="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyText}}"
+                       Foreground="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyColor}}"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- 로그 테이블 -->
+    <Grid Grid.Row="2" Margin="4,0,4,4">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- 분류 이력 -->
+      <Border Grid.Column="0" Style="{StaticResource Card}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Grid Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
+              <TextBlock Text="분류 이력 로그" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+              <TextBlock Text=" (정상 / 불량)" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,0,0"/>
+            </StackPanel>
+            <Button Style="{StaticResource SmallBtn}" Content="초기화"
+                    Command="{Binding ClearLogsCommand}" CommandParameter="sorting"
+                    HorizontalAlignment="Right"/>
+          </Grid>
+          <DataGrid Grid.Row="1" ItemsSource="{Binding SortingLogs}" Style="{StaticResource DG}">
+            <DataGrid.ColumnHeaderStyle>
+              <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
+            </DataGrid.ColumnHeaderStyle>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="시각"     Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="58"/>
+              <DataGridTextColumn Header="운송장"   Binding="{Binding TrackingNumber}"                  Width="85"/>
+              <DataGridTextColumn Header="인식"     Binding="{Binding RecognitionType}"                 Width="38"/>
+              <DataGridTextColumn Header="권역"     Binding="{Binding Region}"                          Width="44"/>
+              <DataGridTemplateColumn Header="상태" Width="48">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
+                            Background="{Binding Status, Converter={StaticResource StatusToColor}}">
+                      <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="신뢰도"   Binding="{Binding Confidence, StringFormat={}{0}%}" Width="52"/>
+              <DataGridTextColumn Header="오류유형" Binding="{Binding ErrorType}"                       Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Grid>
+      </Border>
+
+      <!-- 출고 상태 -->
+      <Border Grid.Column="1" Style="{StaticResource Card}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Grid Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="▌ " Foreground="#C084FC" FontSize="14"/>
+              <TextBlock Text="출고 상태 로그" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+            </StackPanel>
+            <Button Style="{StaticResource SmallBtn}" Content="초기화"
+                    Command="{Binding ClearLogsCommand}" CommandParameter="shipping"
+                    HorizontalAlignment="Right"/>
+          </Grid>
+          <DataGrid Grid.Row="1" ItemsSource="{Binding ShippingLogs}" Style="{StaticResource DG}">
+            <DataGrid.ColumnHeaderStyle>
+              <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
+            </DataGrid.ColumnHeaderStyle>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="시각"     Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="58"/>
+              <DataGridTextColumn Header="운송장"   Binding="{Binding TrackingNumber}"                  Width="85"/>
+              <DataGridTextColumn Header="권역"     Binding="{Binding Region}"                          Width="44"/>
+              <DataGridTextColumn Header="목적지"   Binding="{Binding Destination}"                     Width="*"/>
+              <DataGridTemplateColumn Header="상태" Width="62">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
+                            Background="{Binding Status, Converter={StaticResource StatusToColor}}">
+                      <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="슬롯" Binding="{Binding SlotNumber, StringFormat=#{0}}" Width="36"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>
