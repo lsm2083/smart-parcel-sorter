@@ -1,8 +1,8 @@
 from database.db import get_db
-from sockets.command_push import (
-    push_actuator_forward, push_actuator_backward,
-    push_conveyor_start, push_vision_scan,
-    push_sort, push_emergency_stop_all,
+from mqtt.command_publish import (
+    publish_actuator_forward, publish_actuator_backward,
+    publish_conveyor_start, publish_vision_scan,
+    publish_sort, publish_emergency_stop_all,
 )
 from sockets.wpf_events import (
     emit_package_detected, emit_package_scanned, emit_package_classified,
@@ -44,14 +44,14 @@ def handle_sensor_event(data):
         conn.commit()
         conn.close()
         emit_package_detected(_current_package_id)
-        push_actuator_forward()
+        publish_actuator_forward()
 
     elif event == 'SCAN_POSITION_ARRIVED':
         _set_status(_current_package_id, 'SCAN_POSITION')
-        push_vision_scan(_current_package_id)
+        publish_vision_scan(_current_package_id)
 
     elif event == 'PHYSICAL_ESTOP':
-        push_emergency_stop_all()
+        publish_emergency_stop_all()
         emit_emergency_stop(source='PHYSICAL_BUTTON')
 
 
@@ -62,11 +62,11 @@ def handle_command_result(data):
     status = data.get('status')
 
     if cmd == 'ACTUATOR_FORWARD' and status == 'DONE':
-        _set_status(_current_package_id, 'PUSH_DONE')
-        push_actuator_backward()
+        _set_status(_current_package_id, 'publish_DONE')
+        publish_actuator_backward()
 
     elif cmd == 'ACTUATOR_BACKWARD' and status == 'DONE':
-        push_conveyor_start()
+        publish_conveyor_start()
         _set_status(_current_package_id, 'MOVING')
 
 
@@ -93,7 +93,7 @@ def handle_scan_result(data):
 
     emit_package_scanned(pid, invoice_no, sort_code, scan_method)
     emit_package_classified(pid, sort_code, destination)
-    push_sort(sort_code, pid)
+    publish_sort(sort_code, pid)
 
 
 # ── QR / OCR 실패
@@ -121,7 +121,7 @@ def handle_ocr_fail(data):
     )
     conn.commit()
     conn.close()
-    push_sort('DEFECT', pid)
+    publish_sort('DEFECT', pid)
 
 
 # ── 지게차 결과

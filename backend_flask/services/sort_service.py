@@ -3,7 +3,7 @@ from sockets.wpf_events import (
     emit_sort_completed, emit_robot_status,
     emit_sorting_log_added, emit_shipping_log_added,
 )
-from sockets.command_push import push_blackbox_snapshot, push_robot_home
+from mqtt.command_publish import publish_blackbox_snapshot, publish_robot_home
 
 
 def _get_destination_info(sort_code):
@@ -60,7 +60,7 @@ def handle_sort_result(data):
         # WPF 이벤트
         emit_sort_completed(pid, sort_code)
         emit_robot_status('ROBOT_SORT_DONE', pid)
-        push_robot_home()
+        publish_robot_home()
 
         emit_sorting_log_added({
             "id": sort_log_id,
@@ -104,7 +104,7 @@ def handle_sort_result(data):
         conn.commit()
         conn.close()
 
-        push_blackbox_snapshot(reason=result)
+        publish_blackbox_snapshot(reason=result)
 
         emit_sorting_log_added({
             "id": sort_log_id,
