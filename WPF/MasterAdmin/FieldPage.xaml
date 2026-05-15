@@ -9,7 +9,7 @@
   <UserControl.Resources>
 
     <Style x:Key="Card" TargetType="Border">
-      <Setter Property="Background"   Value="#1E2A3A"/>
+      <Setter Property="Background"   Value="{DynamicResource BgCard}"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding"      Value="14"/>
       <Setter Property="Margin"       Value="4"/>
@@ -18,30 +18,30 @@
     <Style x:Key="SecTitle" TargetType="TextBlock">
       <Setter Property="FontSize"   Value="11"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#94A3B8"/>
+      <Setter Property="Foreground" Value="{DynamicResource FgSecondary}"/>
       <Setter Property="Margin"     Value="0,0,0,8"/>
     </Style>
 
     <Style x:Key="BigNum" TargetType="TextBlock">
       <Setter Property="FontSize"   Value="26"/>
       <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="#F1F5F9"/>
+      <Setter Property="Foreground" Value="{DynamicResource FgPrimary}"/>
     </Style>
 
     <Style x:Key="SubLabel" TargetType="TextBlock">
       <Setter Property="FontSize"   Value="11"/>
-      <Setter Property="Foreground" Value="#64748B"/>
+      <Setter Property="Foreground" Value="{DynamicResource FgMuted}"/>
       <Setter Property="Margin"     Value="0,2,0,0"/>
     </Style>
 
     <Style x:Key="DG" TargetType="DataGrid">
       <Setter Property="Background"               Value="Transparent"/>
-      <Setter Property="Foreground"               Value="#CBD5E1"/>
+      <Setter Property="Foreground"               Value="{DynamicResource FgData}"/>
       <Setter Property="BorderThickness"          Value="0"/>
       <Setter Property="RowBackground"            Value="Transparent"/>
-      <Setter Property="AlternatingRowBackground" Value="#0F1923"/>
+      <Setter Property="AlternatingRowBackground" Value="{DynamicResource BgAltRow}"/>
       <Setter Property="GridLinesVisibility"      Value="Horizontal"/>
-      <Setter Property="HorizontalGridLinesBrush" Value="#1E3A5F"/>
+      <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderLine}"/>
       <Setter Property="ColumnHeaderHeight"       Value="30"/>
       <Setter Property="RowHeight"                Value="28"/>
       <Setter Property="FontSize"                 Value="11"/>
@@ -54,18 +54,18 @@
     </Style>
 
     <Style x:Key="DGH" TargetType="DataGridColumnHeader">
-      <Setter Property="Background"      Value="#0F1923"/>
-      <Setter Property="Foreground"      Value="#64748B"/>
+      <Setter Property="Background"      Value="{DynamicResource BgColHead}"/>
+      <Setter Property="Foreground"      Value="{DynamicResource FgMuted}"/>
       <Setter Property="FontSize"        Value="10"/>
       <Setter Property="FontWeight"      Value="SemiBold"/>
       <Setter Property="Padding"         Value="8,5"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="BorderBrush"     Value="#1E3A5F"/>
+      <Setter Property="BorderBrush"     Value="{DynamicResource BorderLine}"/>
     </Style>
 
     <Style x:Key="SmallBtn" TargetType="Button">
-      <Setter Property="Background"      Value="#1E3A5F"/>
-      <Setter Property="Foreground"      Value="#94A3B8"/>
+      <Setter Property="Background"      Value="{DynamicResource SmBtnBg}"/>
+      <Setter Property="Foreground"      Value="{DynamicResource SmBtnFg}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="FontSize"        Value="10"/>
       <Setter Property="Padding"         Value="8,4"/>
@@ -191,7 +191,7 @@
                 </EventTrigger>
               </Ellipse.Triggers>
             </Ellipse>
-            <TextBlock Text="QR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+            <TextBlock Text="QR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
             <TextBlock Text="  LIVE" FontSize="10" Foreground="#4ADE80" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Grid.Row="1" Background="#0A1628" CornerRadius="6" ClipToBounds="True">
@@ -223,7 +223,7 @@
             </Grid>
           </Border>
           <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
-            <TextBlock Text="상태: " FontSize="10" Foreground="#64748B"/>
+            <TextBlock Text="상태: " FontSize="10" Foreground="{DynamicResource FgMuted}"/>
             <TextBlock Text="{Binding DeviceStatus.QrCamStatus}" FontSize="10"
                        Foreground="{Binding DeviceStatus.QrCamStatus, Converter={StaticResource StatusToColor}}"/>
           </StackPanel>
@@ -250,7 +250,7 @@
                 </EventTrigger>
               </Ellipse.Triggers>
             </Ellipse>
-            <TextBlock Text="OCR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+            <TextBlock Text="OCR 카메라" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
             <TextBlock Text="  LIVE" FontSize="10" Foreground="#38BDF8" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Grid.Row="1" Background="#0A1628" CornerRadius="6" ClipToBounds="True">
@@ -280,7 +280,7 @@
             </Grid>
           </Border>
           <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
-            <TextBlock Text="상태: " FontSize="10" Foreground="#64748B"/>
+            <TextBlock Text="상태: " FontSize="10" Foreground="{DynamicResource FgMuted}"/>
             <TextBlock Text="{Binding DeviceStatus.OcrCamStatus}" FontSize="10"
                        Foreground="{Binding DeviceStatus.OcrCamStatus, Converter={StaticResource StatusToColor}}"/>
           </StackPanel>
@@ -306,22 +306,22 @@
           </Border>
           <Grid Margin="0,2">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <TextBlock Text="로봇팔" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Text="로봇팔" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
             <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
                        Text="{Binding DeviceStatus.RobotArmStatus}"
                        Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
           </Grid>
           <Grid Margin="0,2">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <TextBlock Text="투입부" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Text="투입부" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
             <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
                        Text="{Binding DeviceStatus.InputUnitStatus}"
                        Foreground="{Binding DeviceStatus.InputUnitStatus, Converter={StaticResource StatusToColor}}"/>
           </Grid>
-          <Separator Background="#1E3A5F" Margin="0,5"/>
+          <Separator Background="{DynamicResource AccentBg}" Margin="0,5"/>
           <Grid Margin="0,2">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <TextBlock Text="비상정지" FontSize="11" Foreground="#64748B"/>
+            <TextBlock Text="비상정지" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
             <TextBlock Grid.Column="1" FontSize="11" HorizontalAlignment="Right"
                        Text="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyText}}"
                        Foreground="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyColor}}"/>
@@ -347,8 +347,8 @@
           <Grid Grid.Row="0" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
-              <TextBlock Text="분류 이력 로그" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
-              <TextBlock Text=" (정상 / 불량)" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,0,0"/>
+              <TextBlock Text="분류 이력 로그" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+              <TextBlock Text=" (정상 / 불량)" FontSize="11" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center" Margin="4,0,0,0"/>
             </StackPanel>
             <Button Style="{StaticResource SmallBtn}" Content="초기화"
                     Command="{Binding ClearLogsCommand}" CommandParameter="sorting"
@@ -390,7 +390,7 @@
           <Grid Grid.Row="0" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="▌ " Foreground="#C084FC" FontSize="14"/>
-              <TextBlock Text="출고 상태 로그" FontSize="13" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+              <TextBlock Text="출고 상태 로그" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
             </StackPanel>
             <Button Style="{StaticResource SmallBtn}" Content="초기화"
                     Command="{Binding ClearLogsCommand}" CommandParameter="shipping"

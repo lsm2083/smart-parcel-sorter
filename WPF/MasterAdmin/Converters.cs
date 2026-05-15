@@ -39,7 +39,7 @@ namespace MasterAdmin
             {
                 "오류" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
                 "경고" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
-                _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
+                _     => new SolidColorBrush(Color.FromRgb(100, 116, 139))
             };
         }
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
