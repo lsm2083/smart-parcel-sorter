@@ -1,3 +1,5 @@
+using System;
+using System.IO.Ports;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -17,8 +19,6 @@ namespace MasterAdmin
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            // 0 = 8Mega autofous webcamera (현장 CAM)
-            // 1 = QHD Webcam              (출고 CAM)
             _cam1 = new CameraHelper(0, CamFieldImg,    CamFieldPlaceholder);
             _cam2 = new CameraHelper(1, CamShippingImg, CamShippingPlaceholder);
             _cam1.Start();
