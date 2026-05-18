@@ -1,40 +1,36 @@
 import easyocr
 import cv2
 
+# 이건 반드시 함수 밖에 있어야 함
 reader = easyocr.Reader(["ko", "en"], gpu=False)
 
 
 def detect_ocr(frame):
-    # 1. 확대
-    img = cv2.resize(frame, None, fx=2.0, fy=2.0)
+    # OCR 영역이 너무 크면 줄이기
+    h, w = frame.shape[:2]
 
-    # 2. 흑백 변환
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # 너무 큰 이미지만 축소
+    max_width = 500
+    if w > max_width:
+        scale = max_width / w
+        frame = cv2.resize(frame, None, fx=scale, fy=scale)
 
-    # 3. 노이즈 제거
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    # 흑백 변환만 간단히
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # 4. 대비 증가
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(blur)
-
-    # 5. 이진화
-    thresh = cv2.adaptiveThreshold(
-        enhanced,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        31,
-        10
+    # OCR 실행
+    results = reader.readtext(
+        gray,
+        detail=1,
+        paragraph=False,
+        batch_size=1
     )
-
-    results = reader.readtext(thresh)
 
     texts = []
     confidences = []
 
     for bbox, text, confidence in results:
-        if confidence < 0.2:
+        if confidence < 0.25:
             continue
 
         texts.append(text)
