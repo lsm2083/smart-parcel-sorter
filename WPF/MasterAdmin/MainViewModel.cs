@@ -33,7 +33,7 @@ namespace MasterAdmin
             get => _currentPage;
             set { _currentPage = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFieldPage)); OnPropertyChanged(nameof(IsOverviewPage)); }
         }
-        public bool IsFieldPage => _currentPage == "현장";
+        public bool IsFieldPage   => _currentPage == "현장";
         public bool IsOverviewPage => _currentPage == "총괄";
 
         // ── Clock
@@ -57,16 +57,16 @@ namespace MasterAdmin
         // ApiService에서 DeviceStatus 변경 후 UI에 알릴 때 사용
         public void RefreshDeviceStatus() => OnPropertyChanged(nameof(DeviceStatus));
 
-        public ObservableCollection<SortingLog> SortingLogs { get; } = new();
-        public ObservableCollection<ShippingLog> ShippingLogs { get; } = new();
+        public ObservableCollection<SortingLog>   SortingLogs   { get; } = new();
+        public ObservableCollection<ShippingLog>  ShippingLogs  { get; } = new();
         public ObservableCollection<BlackboxEvent> BlackboxEvents { get; } = new();
-        public ObservableCollection<LoginRecord> LoginRecords { get; } = new();
+        public ObservableCollection<LoginRecord>  LoginRecords  { get; } = new();
 
-        public ICommand NavigateToFieldCommand { get; }
+        public ICommand NavigateToFieldCommand  { get; }
         public ICommand NavigateToOverviewCommand { get; }
-        public ICommand ToggleEmergencyCommand { get; }
-        public ICommand ToggleThemeCommand { get; }
-        public ICommand ClearLogsCommand { get; }
+        public ICommand ToggleEmergencyCommand  { get; }
+        public ICommand ToggleThemeCommand      { get; }
+        public ICommand ClearLogsCommand        { get; }
 
         // ── Theme
         private bool _isDark = true;
@@ -75,12 +75,12 @@ namespace MasterAdmin
             get => _isDark;
             set { _isDark = value; OnPropertyChanged(); OnPropertyChanged(nameof(ThemeIcon)); OnPropertyChanged(nameof(ThemeLabel)); }
         }
-        public string ThemeIcon => IsDark ? "☀" : "🌙";
+        public string ThemeIcon  => IsDark ? "☀" : "🌙";
         public string ThemeLabel => IsDark ? "라이트 모드" : "다크 모드";
 
         public MainViewModel()
         {
-            NavigateToFieldCommand = new RelayCommand(_ => CurrentPage = "현장");
+            NavigateToFieldCommand    = new RelayCommand(_ => CurrentPage = "현장");
             NavigateToOverviewCommand = new RelayCommand(_ => CurrentPage = "총괄");
 
             // ── [변경] 비상정지: 로컬 토글 → Flask API 호출
@@ -95,15 +95,15 @@ namespace MasterAdmin
             {
                 switch (p?.ToString())
                 {
-                    case "sorting": SortingLogs.Clear(); break;
-                    case "shipping": ShippingLogs.Clear(); break;
+                    case "sorting":  SortingLogs.Clear();   break;
+                    case "shipping": ShippingLogs.Clear();  break;
                     case "blackbox": BlackboxEvents.Clear(); break;
-                    case "login": LoginRecords.Clear(); break;
+                    case "login":    LoginRecords.Clear();  break;
                 }
             });
 
             // ── [변경] ApiService 초기화 (서버 IP 수정 필요)
-            _api = new ApiService("http://192.168.0.100:5000");
+            _api = new ApiService("http://192.168.0.24:5000");
 
             // ── [변경] LoadSampleData() → Flask REST 초기 로딩
             _ = InitAsync();
@@ -154,22 +154,22 @@ namespace MasterAdmin
         {
             string subFolder = eventType switch
             {
-                BlackboxEventType.OcrFail => @"ocr_fail\",
+                BlackboxEventType.OcrFail  => @"ocr_fail\",
                 BlackboxEventType.SortFail => @"sort_fail\",
-                BlackboxEventType.Jam => @"jam\",
-                _ => @"etc\"
+                BlackboxEventType.Jam      => @"jam\",
+                _                          => @"etc\"
             };
             string saveFolder = BlackboxRoot + subFolder;
-            string fileName = $"{eventType}_{DateTime.Now:yyyyMMdd_HHmmss}_{_localId}.jpg";
+            string fileName   = $"{eventType}_{DateTime.Now:yyyyMMdd_HHmmss}_{_localId}.jpg";
             return new BlackboxEvent
             {
-                Id = _localId++,
-                Timestamp = DateTime.Now,
-                EventType = eventType,
-                Description = description,
-                ImagePath = saveFolder + fileName,
-                SaveFolder = saveFolder,
-                Severity = severity,
+                Id             = _localId++,
+                Timestamp      = DateTime.Now,
+                EventType      = eventType,
+                Description    = description,
+                ImagePath      = saveFolder + fileName,
+                SaveFolder     = saveFolder,
+                Severity       = severity,
                 TrackingNumber = trackingNumber
             };
         }
