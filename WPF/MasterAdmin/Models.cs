@@ -13,6 +13,7 @@ namespace MasterAdmin
         public string   ErrorType       { get; set; } = "";
         public double   ProcessingTime  { get; set; }
         public double   Confidence      { get; set; }
+        public string? ImagePath { get; set; }
     }
 
     public class ShippingLog

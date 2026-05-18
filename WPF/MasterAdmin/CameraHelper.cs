@@ -18,19 +18,22 @@ namespace MasterAdmin
         private CancellationTokenSource? _cts;
         private bool _disposed;
 
+        // 프레임 콜백 — 외부에서 등록해서 사용
+        public Action<Mat>? OnFrame { get; set; }
+
         public bool IsRunning { get; private set; }
 
         public CameraHelper(int deviceIndex, Image targetImage, StackPanel placeholder)
         {
             _deviceIndex = deviceIndex;
-            _target      = targetImage;
+            _target = targetImage;
             _placeholder = placeholder;
         }
 
         public void Start()
         {
             if (IsRunning) return;
-            _cts      = new CancellationTokenSource();
+            _cts = new CancellationTokenSource();
             IsRunning = true;
             Task.Run(() => CaptureLoop(_cts.Token));
         }
@@ -44,12 +47,8 @@ namespace MasterAdmin
         private void CaptureLoop(CancellationToken token)
         {
             using var cap = new VideoCapture(_deviceIndex, VideoCaptureAPIs.DSHOW);
-
-            // 해상도 낮게 설정 → 속도 향상
-            cap.Set(VideoCaptureProperties.FrameWidth,  640);
+            cap.Set(VideoCaptureProperties.FrameWidth, 640);
             cap.Set(VideoCaptureProperties.FrameHeight, 480);
-
-            // 버퍼 최소화 → 지연 감소
             cap.Set(VideoCaptureProperties.BufferSize, 1);
 
             if (!cap.IsOpened())
@@ -60,34 +59,33 @@ namespace MasterAdmin
 
             HidePlaceholder();
 
-            using var frame     = new Mat();
+            using var frame = new Mat();
             using var converted = new Mat();
 
-            // WriteableBitmap 재사용 → GC 부담 감소
             WriteableBitmap? wb = null;
 
             while (!token.IsCancellationRequested)
             {
-                // 버퍼에 쌓인 프레임 버리고 최신 프레임만 가져오기
                 cap.Grab();
                 if (!cap.Retrieve(frame) || frame.Empty()) continue;
 
+                // 외부 콜백으로 프레임 전달 (버퍼링용)
+                OnFrame?.Invoke(frame.Clone());
+
                 Cv2.CvtColor(frame, converted, ColorConversionCodes.BGR2BGRA);
 
-                int w      = converted.Width;
-                int h      = converted.Height;
+                int w = converted.Width;
+                int h = converted.Height;
                 int stride = w * 4;
 
                 _target.Dispatcher.Invoke(() =>
                 {
-                    // 처음 한 번만 WriteableBitmap 생성
                     if (wb == null || wb.PixelWidth != w || wb.PixelHeight != h)
                     {
                         wb = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
                         _target.Source = wb;
                     }
 
-                    // 직접 픽셀 버퍼에 복사 (빠름)
                     wb.Lock();
                     var pixelData = new byte[stride * h];
                     Marshal.Copy(converted.Data, pixelData, 0, pixelData.Length);
@@ -102,14 +100,14 @@ namespace MasterAdmin
             _placeholder.Dispatcher.Invoke(() =>
             {
                 _placeholder.Visibility = Visibility.Visible;
-                _target.Visibility      = Visibility.Collapsed;
+                _target.Visibility = Visibility.Collapsed;
             });
 
         private void HidePlaceholder() =>
             _placeholder.Dispatcher.Invoke(() =>
             {
                 _placeholder.Visibility = Visibility.Collapsed;
-                _target.Visibility      = Visibility.Visible;
+                _target.Visibility = Visibility.Visible;
             });
 
         public void Dispose()
