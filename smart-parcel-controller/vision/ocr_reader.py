@@ -5,38 +5,42 @@ reader = easyocr.Reader(["ko", "en"], gpu=False)
 
 
 def detect_ocr(frame):
-    # 1. 크기 확대
-    resized = cv2.resize(frame, None, fx=2.0, fy=2.0)
+    # 1. 확대
+    img = cv2.resize(frame, None, fx=2.0, fy=2.0)
 
     # 2. 흑백 변환
-    gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # 3. 노이즈 제거
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
 
-    # 4. 글자 선명하게 이진화
-    thresh = cv2.threshold(
-        blur,
-        0,
-        255,
-        cv2.THRESH_BINARY + cv2.THRESH_OTSU
-    )[1]
+    # 4. 대비 증가
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(blur)
 
-    # 5. OCR 실행
-    results = reader.readtext(resized)
+    # 5. 이진화
+    thresh = cv2.adaptiveThreshold(
+        enhanced,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        10
+    )
+
+    results = reader.readtext(thresh)
 
     texts = []
     confidences = []
 
     for bbox, text, confidence in results:
-        # 너무 낮은 신뢰도는 버림
-        if confidence < 0.3:
+        if confidence < 0.2:
             continue
 
         texts.append(text)
         confidences.append(confidence)
 
-    full_text = "\n".join(texts)
+    full_text = " ".join(texts)
 
     avg_confidence = 0.0
     if confidences:

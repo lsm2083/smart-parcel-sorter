@@ -34,10 +34,10 @@ def start_camera():
 
         # OCR 영역: 화면 아래쪽 글자 영역만
         x1 = int(w * 0.20)
-        x2 = int(w * 0.75)
+        x2 = int(w * 0.80)
 
-        y1 = int(h * 0.55)
-        y2 = int(h * 0.90)
+        y1 = int(h * 0.30)
+        y2 = int(h * 0.70)
 
         cv2.rectangle(
             frame,
