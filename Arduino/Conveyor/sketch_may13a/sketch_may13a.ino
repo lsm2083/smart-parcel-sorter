@@ -8,6 +8,7 @@ const int SENSOR_COUNT = 2;
 
 bool emergencyStop = false;
 unsigned long lastSensorPrint = 0;  // 센서 출력 타이머
+bool conveyorRunning = false;
 
 void setup() {
   pinMode(stepPin, OUTPUT);
@@ -27,6 +28,8 @@ void setup() {
 }
 
 void loop() {
+  handleSerial();
+
   // 비상정지 체크
   if (digitalRead(emergencyPin) == HIGH) {
     if (!emergencyStop) {
@@ -58,8 +61,32 @@ void loop() {
   }
 
   // 컨베이어 정상 동작
+  if (conveyorRunning) {
   digitalWrite(stepPin, HIGH);
-  delayMicroseconds(700);
+  delayMicroseconds(500);
   digitalWrite(stepPin, LOW);
-  delayMicroseconds(700);
+  delayMicroseconds(500);
+  }
+}
+
+void handleSerial() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+
+    if (cmd.startsWith("CONVEYOR_START")) {
+      conveyorRunning = true;
+      Serial.println("OK:CONVEYOR_START");
+
+    } else if (cmd == "CONVEYOR_STOP") {
+      conveyorRunning = false;
+      digitalWrite(enaPin, HIGH);
+      Serial.println("OK:CONVEYOR_STOP");
+
+    } else if (cmd == "EMERGENCY_STOP") {
+      conveyorRunning = false;
+      digitalWrite(enaPin, HIGH);
+      Serial.println("OK:EMERGENCY_STOP");
+    }
+  }
 }
