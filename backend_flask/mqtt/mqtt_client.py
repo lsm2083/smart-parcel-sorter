@@ -81,7 +81,8 @@ def register_mqtt_handlers(mqtt_client, app):
                         emit_device_disconnected(device_id)
                     elif status == 'ONLINE':
                         from services.device_service import set_online
-                        set_online(device_id, data.get('device_type', ''), data.get('ip_address', ''))
+                        set_online(device_id, data.get('device_type', ''),
+                                   data.get('ip_address', ''), data.get('stream_url'))
                         from sockets.wpf_events import emit_device_connected
                         emit_device_connected(device_id, data.get('device_type', ''))
 
