@@ -1,7 +1,16 @@
 import cv2
 import time
+import threading
 from qr_reader import detect_qr
 from ocr_reader import detect_ocr
+
+
+def run_ocr_thread(ocr_area):
+    print("\n===== 자동 OCR 실행 =====")
+    result = detect_ocr(ocr_area)
+    print("OCR 결과:", result["text"])
+    print("OCR 신뢰도:", result["confidence"])
+    print("========================\n")
 
 
 def start_camera():
@@ -17,95 +26,55 @@ def start_camera():
     window_name = "Camera Stream"
     processed_qr = set()
 
+    pending_ocr = False
+    ocr_start_time = 0
+
     while True:
         ret, frame = cap.read()
 
         if not ret or frame is None:
-            print("프레임을 읽을 수 없습니다.")
             continue
 
-        # QR 인식
         qr_data, bbox = detect_qr(frame)
 
-        # -----------------
-        # OCR 영역 항상 표시
-        # -----------------
         h, w, _ = frame.shape
 
-        # OCR 영역: 화면 아래쪽 글자 영역만
         x1 = int(w * 0.00)
         x2 = int(w * 0.60)
-
         y1 = int(h * 0.20)
         y2 = int(h * 0.85)
 
-        cv2.rectangle(
-            frame,
-            (x1, y1),
-            (x2, y2),
-            (255, 0, 0),
-            2
-        )
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-        cv2.putText(
-            frame,
-            "OCR AREA",
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (255, 0, 0),
-            2
-        )
-
-        # -----------------
-        # QR 박스 표시
-        # -----------------
-        if bbox is not None:
-            points = bbox[0]
-
-            for i in range(len(bbox[0])):
-                pt1 = tuple(bbox[0][i])
-                pt2 = tuple(bbox[0][(i + 1) % len(bbox[0])])
-                cv2.line(frame, pt1, pt2, (0, 255, 0), 2)
-
-            cv2.putText(
-                frame,
-                "QR Detected",
-                tuple(points[0]),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-
-        # -----------------
-        # QR 처음 인식 시 자동 OCR
-        # -----------------
         if qr_data and qr_data not in processed_qr:
             processed_qr.add(qr_data)
-
             print("QR 인식 성공:", qr_data)
 
-            
+            pending_ocr = True
+            ocr_start_time = time.time()
 
-            ocr_area = frame[y1:y2, x1:x2]
+        if pending_ocr and time.time() - ocr_start_time >= 1.0:
+            pending_ocr = False
 
-            print("\n===== 자동 OCR 실행 =====")
-            result = detect_ocr(ocr_area)
-            print("OCR 결과:", result["text"])
-            print("OCR 신뢰도:", result["confidence"])
-            print("========================\n")
+            # 이 frame이 진짜 1초 뒤 현재 화면
+            ocr_area = frame[y1:y2, x1:x2].copy()
+
+            threading.Thread(
+                target=run_ocr_thread,
+                args=(ocr_area,),
+                daemon=True
+            ).start()
 
         cv2.imshow(window_name, frame)
 
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord("q"):
-            print("카메라 종료")
             break
 
         if key == ord("r"):
             processed_qr.clear()
+            pending_ocr = False
             print("처리 기록 초기화")
 
     cap.release()
