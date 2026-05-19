@@ -39,10 +39,10 @@ def start_camera():
 
         h, w, _ = frame.shape
 
-        x1 = int(w * 0.00)
-        x2 = int(w * 0.60)
-        y1 = int(h * 0.20)
-        y2 = int(h * 0.85)
+        x1 = int(w * 0.20)
+        x2 = int(w * 0.80)
+        y1 = int(h * 0.175)
+        y2 = int(h * 0.825)
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
@@ -53,7 +53,7 @@ def start_camera():
             pending_ocr = True
             ocr_start_time = time.time()
 
-        if pending_ocr and time.time() - ocr_start_time >= 1.0:
+        if pending_ocr and time.time() - ocr_start_time >= 2.0:
             pending_ocr = False
 
             # 이 frame이 진짜 1초 뒤 현재 화면
