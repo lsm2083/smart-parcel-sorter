@@ -123,5 +123,5 @@ class VisionAgent(AgentBase):
 
 
 if __name__ == "__main__":
-    agent = VisionAgent("192.168.0.24")
+    agent = VisionAgent("192.168.0.21")
     agent.connect()
