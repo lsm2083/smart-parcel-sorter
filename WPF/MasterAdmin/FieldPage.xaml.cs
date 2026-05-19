@@ -29,7 +29,7 @@ namespace MasterAdmin
         private SerialPort? _irPort;
         private string _irBuffer = "";
 
-        private const string IR_PORT = "COM7";
+        private const string IR_PORT = "COM5";
         private const int IR_BAUD = 115200;
         private const string SAVE_FOLDER = "blackbox\\jam\\";
 
@@ -75,6 +75,15 @@ namespace MasterAdmin
             {
                 vm.SortingLogs.CollectionChanged += (_, _) => ApplySortFilter();
                 vm.ShippingLogs.CollectionChanged += (_, _) => ApplyShipFilter();
+
+                // QR/OCR 실패 시 녹화 트리거 등록
+                vm.TriggerRecording = reason =>
+                {
+                    string? videoPath = RecordJamVideo(reason);
+                    // 가장 최근 로그에 영상 경로 업데이트
+                    if (videoPath != null && vm.SortingLogs.Count > 0)
+                        vm.SortingLogs[0].ImagePath = videoPath;
+                };
             }
 
             ConnectIrSensor();

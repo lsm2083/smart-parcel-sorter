@@ -56,7 +56,8 @@ namespace MasterAdmin
 
         // ApiService에서 DeviceStatus 변경 후 UI에 알릴 때 사용
         public void RefreshDeviceStatus() => OnPropertyChanged(nameof(DeviceStatus));
-
+        // 추가
+        public Action<string>? TriggerRecording { get; set; }
         public ObservableCollection<SortingLog>   SortingLogs   { get; } = new();
         public ObservableCollection<ShippingLog>  ShippingLogs  { get; } = new();
         public ObservableCollection<BlackboxEvent> BlackboxEvents { get; } = new();
@@ -184,4 +185,5 @@ namespace MasterAdmin
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
+
 }

@@ -186,16 +186,21 @@ namespace MasterAdmin
                 catch (Exception ex) { Log("device_status", ex); }
             });
 
-            // 분류 로그 실시간 추가
+            // 분류 로그 실시간 추가 + 실패 시 녹화 트리거
             _socket.On("sorting_log_added", resp =>
             {
                 try
                 {
-                    var log = resp.GetValue<SortingLog>();
+                    var log = resp.GetValue<SortingLog>(0);
                     Dispatch(() =>
                     {
                         vm.SortingLogs.Insert(0, log);
-                        if (vm.SortingLogs.Count > 60) vm.SortingLogs.RemoveAt(vm.SortingLogs.Count - 1);
+                        if (vm.SortingLogs.Count > 60)
+                            vm.SortingLogs.RemoveAt(vm.SortingLogs.Count - 1);
+
+                        // 실패 시 녹화 트리거
+                        if (log.Status == "불량")
+                            vm.TriggerRecording?.Invoke(log.ErrorType ?? "인식실패");
                     });
                 }
                 catch (Exception ex) { Log("sorting_log_added", ex); }

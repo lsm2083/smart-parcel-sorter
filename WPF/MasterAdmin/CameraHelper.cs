@@ -18,7 +18,7 @@ namespace MasterAdmin
         private CancellationTokenSource? _cts;
         private bool _disposed;
 
-        // 프레임 콜백 — 외부에서 등록해서 사용
+        // 프레임 콜백 — 버퍼링/녹화용
         public Action<Mat>? OnFrame { get; set; }
 
         public bool IsRunning { get; private set; }
@@ -60,6 +60,7 @@ namespace MasterAdmin
             HidePlaceholder();
 
             using var frame = new Mat();
+            using var flipped = new Mat();  // 좌우반전 제거용
             using var converted = new Mat();
 
             WriteableBitmap? wb = null;
@@ -69,10 +70,13 @@ namespace MasterAdmin
                 cap.Grab();
                 if (!cap.Retrieve(frame) || frame.Empty()) continue;
 
-                // 외부 콜백으로 프레임 전달 (버퍼링용)
-                OnFrame?.Invoke(frame.Clone());
+                // 좌우반전 제거 (flipCode=1 → 수평 반전 → 원래대로)
+                Cv2.Flip(frame, flipped, FlipMode.Y);
 
-                Cv2.CvtColor(frame, converted, ColorConversionCodes.BGR2BGRA);
+                // 외부 콜백으로 프레임 전달 (버퍼링/녹화용)
+                OnFrame?.Invoke(flipped.Clone());
+
+                Cv2.CvtColor(flipped, converted, ColorConversionCodes.BGR2BGRA);
 
                 int w = converted.Width;
                 int h = converted.Height;
@@ -94,7 +98,7 @@ namespace MasterAdmin
                     wb.Unlock();
                 });
             }
-        }
+        }   
 
         private void ShowPlaceholder() =>
             _placeholder.Dispatcher.Invoke(() =>
