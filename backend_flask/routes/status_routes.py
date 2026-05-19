@@ -37,11 +37,11 @@ def get_status():
     conn.close()
 
     return jsonify({
-        "conveyorStatus":   label('conveyor_agent_01'),
+        "conveyorStatus":   label('conveyor'),
         "conveyorSpeed":    1.3,
-        "robotArmStatus":   label('robot_agent_01'),
-        "ocrCamStatus":     label('vision_agent_01'),
-        "qrCamStatus":      label('vision_agent_01'),
+        "robotArmStatus":   label('robot'),
+        "ocrCamStatus":     label('vision'),
+        "qrCamStatus":      label('vision'),
         "emergencyStop":    False,
         "inputUnitStatus":  "대기",
         "todaySortedCount": today_sorted,

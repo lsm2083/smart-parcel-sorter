@@ -13,19 +13,29 @@ namespace MasterAdmin
     public class CameraHelper : IDisposable
     {
         private readonly int _deviceIndex;
+        private readonly string? _streamUrl;
         private readonly Image _target;
         private readonly StackPanel _placeholder;
         private CancellationTokenSource? _cts;
         private bool _disposed;
 
-        // 프레임 콜백 — 버퍼링/녹화용
         public Action<Mat>? OnFrame { get; set; }
-
         public bool IsRunning { get; private set; }
 
+        // 로컬 카메라용 (기존)
         public CameraHelper(int deviceIndex, Image targetImage, StackPanel placeholder)
         {
             _deviceIndex = deviceIndex;
+            _streamUrl = null;
+            _target = targetImage;
+            _placeholder = placeholder;
+        }
+
+        // 네트워크 스트림 URL용 (추가)
+        public CameraHelper(string streamUrl, Image targetImage, StackPanel placeholder)
+        {
+            _deviceIndex = -1;
+            _streamUrl = streamUrl;
             _target = targetImage;
             _placeholder = placeholder;
         }
@@ -46,7 +56,10 @@ namespace MasterAdmin
 
         private void CaptureLoop(CancellationToken token)
         {
-            using var cap = new VideoCapture(_deviceIndex, VideoCaptureAPIs.DSHOW);
+            using var cap = _streamUrl != null
+                ? new VideoCapture(_streamUrl)
+                : new VideoCapture(_deviceIndex, VideoCaptureAPIs.DSHOW);
+
             cap.Set(VideoCaptureProperties.FrameWidth, 640);
             cap.Set(VideoCaptureProperties.FrameHeight, 480);
             cap.Set(VideoCaptureProperties.BufferSize, 1);
@@ -60,9 +73,8 @@ namespace MasterAdmin
             HidePlaceholder();
 
             using var frame = new Mat();
-            using var flipped = new Mat();  // 좌우반전 제거용
+            using var flipped = new Mat();
             using var converted = new Mat();
-
             WriteableBitmap? wb = null;
 
             while (!token.IsCancellationRequested)
@@ -70,10 +82,11 @@ namespace MasterAdmin
                 cap.Grab();
                 if (!cap.Retrieve(frame) || frame.Empty()) continue;
 
-                // 좌우반전 제거 (flipCode=1 → 수평 반전 → 원래대로)
-                Cv2.Flip(frame, flipped, FlipMode.Y);
+                if (_streamUrl == null)
+                    Cv2.Flip(frame, flipped, FlipMode.Y);
+                else
+                    frame.CopyTo(flipped);
 
-                // 외부 콜백으로 프레임 전달 (버퍼링/녹화용)
                 OnFrame?.Invoke(flipped.Clone());
 
                 Cv2.CvtColor(flipped, converted, ColorConversionCodes.BGR2BGRA);
@@ -98,7 +111,7 @@ namespace MasterAdmin
                     wb.Unlock();
                 });
             }
-        }   
+        }
 
         private void ShowPlaceholder() =>
             _placeholder.Dispatcher.Invoke(() =>

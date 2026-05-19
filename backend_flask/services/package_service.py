@@ -103,7 +103,7 @@ def handle_qr_fail(data):
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO error_logs (error_code, device_id, package_id, message) VALUES (%s,%s,%s,%s)",
-        ('QR_READ_FAIL', 'vision_agent_01', data.get('package_id'), data.get('reason', ''))
+        ('QR_READ_FAIL', 'vision', data.get('package_id'), data.get('reason', ''))
     )
     conn.commit()
     conn.close()
@@ -117,7 +117,7 @@ def handle_ocr_fail(data):
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO error_logs (error_code, device_id, package_id, message) VALUES (%s,%s,%s,%s)",
-        ('OCR_READ_FAIL', 'vision_agent_01', pid, data.get('reason', ''))
+        ('OCR_READ_FAIL', 'vision', pid, data.get('reason', ''))
     )
     conn.commit()
     conn.close()

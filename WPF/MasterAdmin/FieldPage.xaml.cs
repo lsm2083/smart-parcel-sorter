@@ -19,6 +19,7 @@ namespace MasterAdmin
     {
         private CameraHelper? _cam1;
         private CameraHelper? _cam2;
+        private CameraHelper? _camQr;
 
         private string _sortFilter = "전체";
         private string _shipFilter = "전체";
@@ -33,12 +34,11 @@ namespace MasterAdmin
         private const int IR_BAUD = 115200;
         private const string SAVE_FOLDER = "blackbox\\jam\\";
 
-        // 영상 녹화 관련
         private VideoCapture? _recorder;
         private readonly Queue<Mat> _frameBuffer = new();
         private readonly object _frameLock = new();
         private CancellationTokenSource? _recordCts;
-        private const int BUFFER_SECONDS = 5;  // 오류 전 5초 보관
+        private const int BUFFER_SECONDS = 5;
         private const int FPS = 15;
 
         public FieldPage()
@@ -52,8 +52,10 @@ namespace MasterAdmin
         {
             _cam1 = new CameraHelper(0, CamFieldImg, CamFieldPlaceholder);
             _cam2 = new CameraHelper(1, CamShippingImg, CamShippingPlaceholder);
+            _camQr = new CameraHelper("http://192.168.0.6:8081/stream", CamQrImg, CamQrPlaceholder);
             _cam1.Start();
             _cam2.Start();
+            _camQr.Start();
 
             _sortBtnDefs = new[]
             {
@@ -76,32 +78,29 @@ namespace MasterAdmin
                 vm.SortingLogs.CollectionChanged += (_, _) => ApplySortFilter();
                 vm.ShippingLogs.CollectionChanged += (_, _) => ApplyShipFilter();
 
-                // QR/OCR 실패 시 녹화 트리거 등록
                 vm.TriggerRecording = reason =>
                 {
                     string? videoPath = RecordJamVideo(reason);
-                    // 가장 최근 로그에 영상 경로 업데이트
                     if (videoPath != null && vm.SortingLogs.Count > 0)
                         vm.SortingLogs[0].ImagePath = videoPath;
                 };
             }
 
             ConnectIrSensor();
-            StartFrameBuffer();  // 상시 프레임 버퍼링 시작
+            StartFrameBuffer();
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             _cam1?.Dispose();
             _cam2?.Dispose();
+            _camQr?.Dispose();
             DisconnectIrSensor();
             StopFrameBuffer();
         }
 
-        // ── 상시 프레임 버퍼링 (오류 전 5초 보관) ─────────────────────
         private void StartFrameBuffer()
         {
-            // cam1 프레임을 버퍼에 저장
             _cam1!.OnFrame = frame =>
             {
                 lock (_frameLock)
@@ -129,7 +128,6 @@ namespace MasterAdmin
             }
         }
 
-        // ── 오류 시점 영상 저장 (전 5초 + 후 5초) ─────────────────────
         private string? RecordJamVideo(string reason)
         {
             try
@@ -138,7 +136,6 @@ namespace MasterAdmin
                 string fileName = reason + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".avi";
                 string fullPath = Path.Combine(SAVE_FOLDER, fileName);
 
-                // 버퍼된 프레임 복사 (오류 전 5초)
                 List<Mat> buffered;
                 lock (_frameLock)
                 {
@@ -154,7 +151,6 @@ namespace MasterAdmin
                 foreach (var f in buffered)
                     writer.Write(f);
 
-                // 오류 후 5초 — cam1 OnFrame 으로 추가 녹화
                 int afterFrames = BUFFER_SECONDS * FPS;
                 int recordedAfter = 0;
 
@@ -167,8 +163,6 @@ namespace MasterAdmin
                             _cam1.OnFrame = null;
                         writer.Release();
                         System.Diagnostics.Debug.WriteLine("[녹화] 완료: " + fullPath);
-
-                        // 녹화 완료 후 다시 버퍼링 재시작
                         StartFrameBuffer();
                         return;
                     }
@@ -176,7 +170,6 @@ namespace MasterAdmin
                     recordedAfter++;
                 };
 
-                // 기존 버퍼링 콜백 교체 → 녹화 콜백으로
                 if (_cam1 != null)
                     _cam1.OnFrame = afterRecord;
 
@@ -189,7 +182,6 @@ namespace MasterAdmin
             }
         }
 
-        // ── 영상 보기 버튼 ─────────────────────────────────────────────
         private void BtnViewImage_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button btn) return;
@@ -211,7 +203,6 @@ namespace MasterAdmin
                 return;
             }
 
-            // 영상 재생 창
             var win = new System.Windows.Window
             {
                 Title = "블랙박스 녹화 — " + Path.GetFileName(path),
@@ -224,19 +215,18 @@ namespace MasterAdmin
             var media = new MediaElement
             {
                 Source = new Uri(path, UriKind.Absolute),
-                LoadedBehavior = MediaState.Manual,   // ← Manual로 변경
-                UnloadedBehavior = MediaState.Manual,   // ← Manual로 변경
+                LoadedBehavior = MediaState.Manual,
+                UnloadedBehavior = MediaState.Manual,
                 Stretch = Stretch.Uniform,
                 Margin = new Thickness(8)
             };
 
             win.Content = media;
-            win.Loaded += (_, _) => media.Play();     // ← Loaded 후 Play 호출
+            win.Loaded += (_, _) => media.Play();
             win.Closed += (_, _) => media.Stop();
             win.Show();
         }
 
-        // ── 적외선 센서 ───────────────────────────────────────────────
         private void ConnectIrSensor()
         {
             try
@@ -328,7 +318,6 @@ namespace MasterAdmin
         {
             if (DataContext is not MainViewModel vm) return;
 
-            // 영상 녹화 시작 (전 5초 + 후 5초)
             string? videoPath = RecordJamVideo(errorType);
 
             vm.SortingLogs.Insert(0, new SortingLog
@@ -360,7 +349,6 @@ namespace MasterAdmin
             vm.RefreshDeviceStatus();
         }
 
-        // ── 필터 ──────────────────────────────────────────────────────
         private void BtnSortFilter_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button btn) return;

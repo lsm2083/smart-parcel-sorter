@@ -88,7 +88,7 @@ def handle_sort_result(data):
         cur.execute("UPDATE packages SET status='ERROR' WHERE id=%s", (pid,))
         cur.execute(
             "INSERT INTO error_logs (error_code, device_id, package_id) VALUES (%s,%s,%s)",
-            (f'ROBOT_{result}', 'robot_agent_01', pid)
+            (f'ROBOT_{result}', 'robot', pid)
         )
 
         cur.execute("SELECT invoice_no FROM packages WHERE id=%s", (pid,))

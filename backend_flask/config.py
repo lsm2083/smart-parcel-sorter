@@ -10,10 +10,10 @@ DATABASE = 'parcel_sorter.db'
 
 # Agent device_id 목록
 DEVICE_IDS = {
-    'conveyor':  'conveyor_agent_01',
-    'robot':     'robot_agent_01',
-    'vision':    'vision_agent_01',
-    'blackbox':  'blackbox_agent_01',
+    'conveyor':  'conveyor',
+    'robot':     'robot',
+    'vision':    'vision',
+    'blackbox':  'blackbox',
     'forklift_box':   'forklift_box_01',
     'forklift_vinyl': 'forklift_vinyl_01',
 }
