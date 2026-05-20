@@ -2,6 +2,10 @@ import sys
 import json
 import time
 import cv2
+import os
+import base64
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
+
 
 sys.path.append('../common')
 
@@ -16,11 +20,22 @@ class VisionAgent(AgentBase):
     def __init__(self, broker_host):
         super().__init__(
             broker_host,
-            'vision_agent_01',
+            'vision',
             'VISION',
             VISION_COMMAND,
             'parcel/vision/result'
         )
+
+    def _on_connect(self, client, userdata, flags, rc):
+        super()._on_connect(client, userdata, flags, rc)
+        # stream_url 추가 발행
+        self.publish_event(f"parcel/{self.device_id}/status", {
+            "status": "ONLINE",
+            "device_id": self.device_id,
+            "device_type": self.device_type,
+            "stream_url": "http://192.168.0.6:8081/stream"
+        })
+
 
     def handle_command(self, data):
         cmd = data["command"]
@@ -66,11 +81,37 @@ class VisionAgent(AgentBase):
         qr_data = None
         qr_detect_time = None
 
+        last_frame_send = 0
+
         while time.time() - start_time < timeout:
             ret, frame = cap.read()
 
             if not ret or frame is None:
                 continue
+
+            # -----------------------------
+            # 프레임 MQTT 전송 (5fps)
+            # -----------------------------
+            if time.time() - last_frame_send >= 0.2:
+
+                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 50]
+
+                _, buffer = cv2.imencode(
+                    '.jpg',
+                    frame,
+                    encode_param
+                )
+
+                frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+                self.publish_event(
+                    "parcel/vision/frame",
+                    {
+                        "image": frame_base64
+                    }
+                )
+
+                last_frame_send = time.time()
 
             h, w, _ = frame.shape
 
