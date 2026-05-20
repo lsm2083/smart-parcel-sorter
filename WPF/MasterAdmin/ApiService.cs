@@ -136,6 +136,44 @@ namespace MasterAdmin
             catch (Exception ex) { Log("LoadLoginRecords", ex); }
         }
 
+        // ── REST: 컨베이어 제어
+
+        public async Task<bool> ConveyorStartAsync(int speed = 180)
+        {
+            try
+            {
+                string json = "{\"command\":\"CONVEYOR_START\",\"speed\":" + speed + "}";
+                var body    = new StringContent(json, Encoding.UTF8, "application/json");
+                var res     = await _http.PostAsync("api/conveyor/command", body);
+                return res.IsSuccessStatusCode;
+            }
+            catch (Exception ex) { Log("ConveyorStart", ex); return false; }
+        }
+
+        public async Task<bool> ConveyorStopAsync()
+        {
+            try
+            {
+                string json = "{\"command\":\"CONVEYOR_STOP\"}";
+                var body    = new StringContent(json, Encoding.UTF8, "application/json");
+                var res     = await _http.PostAsync("api/conveyor/command", body);
+                return res.IsSuccessStatusCode;
+            }
+            catch (Exception ex) { Log("ConveyorStop", ex); return false; }
+        }
+
+        public async Task<bool> ConveyorResumeAsync()
+        {
+            try
+            {
+                string json = "{\"command\":\"CONVEYOR_START\",\"speed\":180}";
+                var body    = new StringContent(json, Encoding.UTF8, "application/json");
+                var res     = await _http.PostAsync("api/conveyor/command", body);
+                return res.IsSuccessStatusCode;
+            }
+            catch (Exception ex) { Log("ConveyorResume", ex); return false; }
+        }
+
         // ── REST: 비상정지 ────────────────────────────────────────────────
 
         public async Task<bool> EmergencyStopAsync()
@@ -251,6 +289,20 @@ namespace MasterAdmin
             // 장치 연결 / 해제 → 상태 라벨 업데이트
             _socket.On("device_connected", resp => HandleDeviceChange(vm, resp, "작동중"));
             _socket.On("device_disconnected", resp => HandleDeviceChange(vm, resp, "오프라인"));
+
+            // 물리 비상정지 버튼 눌림 (민지)
+            _socket.On("physical_estop", resp =>
+            {
+                try { Dispatch(() => { vm.IsEmergencyStop = true; vm.DeviceStatus.ConveyorStatus = "비상정지"; vm.RefreshDeviceStatus(); }); }
+                catch (Exception ex) { Log("physical_estop", ex); }
+            });
+
+            // 물리 비상정지 버튼 풀림 (민지)
+            _socket.On("estop_released", resp =>
+            {
+                try { Dispatch(() => { vm.IsEmergencyStop = false; vm.DeviceStatus.ConveyorStatus = "대기"; vm.RefreshDeviceStatus(); }); }
+                catch (Exception ex) { Log("estop_released", ex); }
+            });
 
             _ = _socket.ConnectAsync();
         }

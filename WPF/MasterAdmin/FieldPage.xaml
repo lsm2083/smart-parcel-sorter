@@ -89,6 +89,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="160"/>
                 <ColumnDefinition Width="170"/>
             </Grid.ColumnDefinitions>
 
@@ -140,7 +141,57 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+            <!-- 컨베이어 제어 -->
             <Border Grid.Column="5" Style="{StaticResource Card}">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="컨베이어 제어" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
+                    <Grid Margin="0,0,0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="4"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding ConveyorStartCommand}"
+                                Height="26" Cursor="Hand" BorderThickness="0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="#166534" CornerRadius="5">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <TextBlock Text="▶ 시작" Foreground="#4ADE80" FontWeight="Bold" FontSize="10"/>
+                        </Button>
+                        <Button Grid.Column="2" Command="{Binding ConveyorStopCommand}"
+                                Height="26" Cursor="Hand" BorderThickness="0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="#7F1D1D" CornerRadius="5">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <TextBlock Text="■ 종료" Foreground="#F87171" FontWeight="Bold" FontSize="10"/>
+                        </Button>
+                    </Grid>
+                    <Button Command="{Binding ConveyorResumeCommand}"
+                            Height="26" Cursor="Hand" BorderThickness="0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="#1E3A5F" CornerRadius="5">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock Text="↺ 재개" Foreground="#38BDF8" FontWeight="Bold" FontSize="10"/>
+                    </Button>
+                    <TextBlock Text="{Binding DeviceStatus.ConveyorStatus}" FontSize="10"
+                               HorizontalAlignment="Center" Margin="0,3,0,0"
+                               Foreground="{Binding DeviceStatus.ConveyorStatus, Converter={StaticResource StatusToColor}}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="6" Style="{StaticResource Card}">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="비상정지" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
                     <Button Command="{Binding ToggleEmergencyCommand}"

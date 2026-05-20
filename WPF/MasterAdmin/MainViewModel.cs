@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;          // ← 추가
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Windows;
 
 namespace MasterAdmin
 {
@@ -67,7 +68,10 @@ namespace MasterAdmin
         public ICommand NavigateToOverviewCommand { get; }
         public ICommand ToggleEmergencyCommand  { get; }
         public ICommand ToggleThemeCommand      { get; }
-        public ICommand ClearLogsCommand        { get; }
+        public ICommand ClearLogsCommand          { get; }
+        public ICommand ConveyorStartCommand      { get; }
+        public ICommand ConveyorStopCommand       { get; }
+        public ICommand ConveyorResumeCommand     { get; }
 
         // ── Theme
         private bool _isDark = true;
@@ -103,6 +107,10 @@ namespace MasterAdmin
                 }
             });
 
+            ConveyorStartCommand  = new RelayCommand(_ => _ = ConveyorStartAsync());
+            ConveyorStopCommand   = new RelayCommand(_ => _ = ConveyorStopAsync());
+            ConveyorResumeCommand = new RelayCommand(_ => _ = ConveyorResumeAsync());
+
             // ── [변경] ApiService 초기화 (서버 IP 수정 필요)
             _api = new ApiService("http://192.168.0.24:5000");
 
@@ -131,13 +139,41 @@ namespace MasterAdmin
         private async Task ToggleEmergencyAsync()
         {
             if (IsEmergencyStop)
+            {
+                IsEmergencyStop = false;
                 await _api.EmergencyResetAsync();
+            }
             else
+            {
+                IsEmergencyStop = true;
                 await _api.EmergencyStopAsync();
-            // IsEmergencyStop 값은 emergency_stop WebSocket 이벤트로 자동 갱신
+            }
         }
 
-        // ── [추가] 앱 종료 시 정리 (MainWindow.Closing에서 호출)
+        private async Task ConveyorStartAsync()
+        {
+            DeviceStatus.ConveyorStatus = "시작중...";
+            RefreshDeviceStatus();
+            bool ok = await _api.ConveyorStartAsync();
+            if (!ok) { DeviceStatus.ConveyorStatus = "오류"; RefreshDeviceStatus(); }
+        }
+
+        private async Task ConveyorStopAsync()
+        {
+            DeviceStatus.ConveyorStatus = "정지중...";
+            RefreshDeviceStatus();
+            bool ok = await _api.ConveyorStopAsync();
+            if (!ok) { DeviceStatus.ConveyorStatus = "오류"; RefreshDeviceStatus(); }
+        }
+
+        private async Task ConveyorResumeAsync()
+        {
+            DeviceStatus.ConveyorStatus = "재개중...";
+            RefreshDeviceStatus();
+            bool ok = await _api.ConveyorResumeAsync();
+            if (!ok) { DeviceStatus.ConveyorStatus = "오류"; RefreshDeviceStatus(); }
+        }
+
         public async Task CleanupAsync()
         {
             _timer.Stop();
