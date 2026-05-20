@@ -53,6 +53,10 @@ def handle_sensor_event(data):
     elif event == 'PHYSICAL_ESTOP':
         publish_emergency_stop_all()
         emit_emergency_stop(source='PHYSICAL_BUTTON')
+        
+    elif event == 'ESTOP_RELEASED':
+        from sockets.wpf_events import emit_emergency_reset
+        emit_emergency_reset()
 
 
 # ── 명령 결과
