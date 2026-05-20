@@ -7,8 +7,9 @@ const int SENSOR_PINS[10] = {22, 24, 26, 28, 30, 32, 34, 36, 38, 40};
 const int SENSOR_COUNT = 2;
 
 bool emergencyStop = false;
-unsigned long lastSensorPrint = 0;  // 센서 출력 타이머
+unsigned long lastSensorPrint = 0;
 bool conveyorRunning = false;
+bool dirForward = true;  // true = 정방향, false = 역방향
 
 void setup() {
   pinMode(stepPin, OUTPUT);
@@ -25,17 +26,17 @@ void setup() {
 
   Serial.begin(9600);
   Serial.println("시스템 시작. 비상정지 버튼 D3.");
+  Serial.println("명령: CONVEYOR_START / CONVEYOR_STOP / DIR_FORWARD / DIR_BACKWARD / DIR_TOGGLE");
 }
 
 void loop() {
   handleSerial();
 
-  // 비상정지 체크
   if (digitalRead(emergencyPin) == HIGH) {
     if (!emergencyStop) {
       emergencyStop = true;
       digitalWrite(enaPin, HIGH);
-      Serial.println("비상정지 발동!");
+      Serial.println("EVENT:PHYSICAL_ESTOP");
     }
     return;
   }
@@ -46,7 +47,6 @@ void loop() {
     Serial.println("비상정지 해제. 재시작!");
   }
 
-  // 센서값 출력은 500ms마다만 (모터 타이밍 방해 안 함)
   if (millis() - lastSensorPrint >= 500) {
     lastSensorPrint = millis();
     for (int i = 0; i < SENSOR_COUNT; i++) {
@@ -60,12 +60,11 @@ void loop() {
     Serial.println();
   }
 
-  // 컨베이어 정상 동작
   if (conveyorRunning) {
-  digitalWrite(stepPin, HIGH);
-  delayMicroseconds(500);
-  digitalWrite(stepPin, LOW);
-  delayMicroseconds(500);
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(500);
   }
 }
 
@@ -76,6 +75,7 @@ void handleSerial() {
 
     if (cmd.startsWith("CONVEYOR_START")) {
       conveyorRunning = true;
+      digitalWrite(enaPin, LOW);
       Serial.println("OK:CONVEYOR_START");
 
     } else if (cmd == "CONVEYOR_STOP") {
@@ -87,6 +87,21 @@ void handleSerial() {
       conveyorRunning = false;
       digitalWrite(enaPin, HIGH);
       Serial.println("OK:EMERGENCY_STOP");
+
+    } else if (cmd == "DIR_FORWARD") {
+      dirForward = true;
+      digitalWrite(dirPin, HIGH);
+      Serial.println("OK:DIR_FORWARD");
+
+    } else if (cmd == "DIR_BACKWARD") {
+      dirForward = false;
+      digitalWrite(dirPin, LOW);
+      Serial.println("OK:DIR_BACKWARD");
+
+    } else if (cmd == "DIR_TOGGLE") {
+      dirForward = !dirForward;
+      digitalWrite(dirPin, dirForward ? HIGH : LOW);
+      Serial.println(dirForward ? "OK:DIR_FORWARD" : "OK:DIR_BACKWARD");
     }
   }
 }

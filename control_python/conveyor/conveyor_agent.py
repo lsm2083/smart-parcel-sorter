@@ -8,7 +8,7 @@ import serial
 
 class ConveyorAgent(AgentBase):
     def __init__(self, broker_host):
-        super().__init__(broker_host, 'conveyor_agent_01', 'CONVEYOR',
+        super().__init__(broker_host, 'conveyor', 'CONVEYOR',
                          CONVEYOR_COMMAND, CONVEYOR_RESULT)
         self.arduino = serial.Serial('COM3', 9600, timeout=1)
         print("[CONVEYOR] Arduino 연결됨 (COM3)")
@@ -43,9 +43,11 @@ class ConveyorAgent(AgentBase):
                 if not line:
                     continue
 
+                print(f"[RAW] '{line}'")
                 print(f"[ARDUINO] {line}")
 
                 if line == "EVENT:PHYSICAL_ESTOP":
+                    print("[TEST] ESTOP 발행 시도")
                     self.publish_event(CONVEYOR_SENSOR, {"event": "PHYSICAL_ESTOP"})
                 elif line == "EVENT:PACKAGE_DETECTED":
                     self.publish_event(CONVEYOR_SENSOR, {"event": "PACKAGE_DETECTED"})
@@ -57,5 +59,5 @@ class ConveyorAgent(AgentBase):
                 break
 
 if __name__ == '__main__':
-    agent = ConveyorAgent('192.168.0.24')
+    agent = ConveyorAgent('192.168.0.21')
     agent.connect()
