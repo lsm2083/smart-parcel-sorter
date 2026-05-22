@@ -119,6 +119,7 @@
           <ColumnDefinition Width="Auto"/>   <!-- 탭 -->
           <ColumnDefinition Width="*"/>      <!-- 스페이서 -->
           <ColumnDefinition Width="Auto"/>   <!-- 상태 알약 -->
+          <ColumnDefinition Width="Auto"/>   <!-- 디버그 버튼 -->
           <ColumnDefinition Width="Auto"/>   <!-- 테마 버튼 -->
           <ColumnDefinition Width="Auto"/>   <!-- 시계 -->
         </Grid.ColumnDefinitions>
@@ -178,8 +179,23 @@
           </Border>
         </StackPanel>
 
+        <!-- 디버그 창 버튼 -->
+        <Button Grid.Column="4" Click="BtnDebug_Click"
+                Background="#1E3A5F" BorderThickness="0"
+                Padding="10,5" Cursor="Hand" Margin="0,0,6,0"
+                VerticalAlignment="Center">
+          <Button.Template>
+            <ControlTemplate TargetType="Button">
+              <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+            </ControlTemplate>
+          </Button.Template>
+          <TextBlock Text="🔍 디버그" FontSize="11" Foreground="#38BDF8"/>
+        </Button>
+
         <!-- 🌙 / ☀ 테마 토글 버튼 -->
-        <Button Grid.Column="4" Style="{StaticResource ThemeBtn}"
+        <Button Grid.Column="5" Style="{StaticResource ThemeBtn}"
                 Command="{Binding ToggleThemeCommand}"
                 VerticalAlignment="Center" Margin="0,0,10,0">
           <StackPanel Orientation="Horizontal">
@@ -190,7 +206,7 @@
         </Button>
 
         <!-- 시계 -->
-        <Border Grid.Column="5" Background="{DynamicResource BgInput}"
+        <Border Grid.Column="6" Background="{DynamicResource BgInput}"
                 CornerRadius="6" Padding="12,6" VerticalAlignment="Center">
           <TextBlock Text="{Binding CurrentTime}" FontSize="12"
                      Foreground="{DynamicResource FgSecondary}" FontFamily="Consolas"/>

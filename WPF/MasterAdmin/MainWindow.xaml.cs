@@ -9,5 +9,11 @@ namespace MasterAdmin
             InitializeComponent();
             DataContext = new MainViewModel();
         }
+
+        private void BtnDebug_Click(object sender, RoutedEventArgs e)
+        {
+            DebugWindow.Instance.Show();
+            DebugWindow.Instance.Activate();
+        }
     }
 }

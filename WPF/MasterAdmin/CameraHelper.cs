@@ -95,7 +95,7 @@ namespace MasterAdmin
                 int h = converted.Height;
                 int stride = w * 4;
 
-                _target.Dispatcher.Invoke(() =>
+                 _target.Dispatcher.Invoke(() =>
                 {
                     if (wb == null || wb.PixelWidth != w || wb.PixelHeight != h)
                     {

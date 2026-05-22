@@ -88,7 +88,6 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="160"/>
                 <ColumnDefinition Width="170"/>
             </Grid.ColumnDefinitions>
@@ -127,22 +126,8 @@
                     <TextBlock Text="{Binding DeviceStatus.ConveyorStatus}" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
-            <Border Grid.Column="4" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="로봇팔 상태" Style="{StaticResource SecTitle}"/>
-                    <TextBlock Text="{Binding DeviceStatus.RobotArmStatus}" Style="{StaticResource BigNum}" FontSize="18"
-                     Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
-                    <StackPanel Margin="0,4,0,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="투입부: " FontSize="10" Foreground="{DynamicResource FgMuted}"/>
-                            <TextBlock Text="{Binding DeviceStatus.InputUnitStatus}" FontSize="10"
-                         Foreground="{Binding DeviceStatus.InputUnitStatus, Converter={StaticResource StatusToColor}}"/>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
             <!-- 컨베이어 제어 -->
-            <Border Grid.Column="5" Style="{StaticResource Card}">
+            <Border Grid.Column="4" Style="{StaticResource Card}">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="컨베이어 제어" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
                     <Grid Margin="0,0,0,3">
@@ -191,7 +176,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="6" Style="{StaticResource Card}">
+            <Border Grid.Column="5" Style="{StaticResource Card}">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="비상정지" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
                     <Button Command="{Binding ToggleEmergencyCommand}"
@@ -500,7 +485,6 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="신뢰도" Binding="{Binding Confidence, StringFormat={}{0}%}" Width="50"/>
                                 <DataGridTextColumn Header="오류유형" Binding="{Binding ErrorType}" Width="*"/>
                                 <DataGridTemplateColumn Header="이미지" Width="55">
                                     <DataGridTemplateColumn.CellTemplate>

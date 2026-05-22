@@ -12,13 +12,13 @@ namespace MasterAdmin
         {
             return (value?.ToString() ?? "") switch
             {
-                "정상" or "출고완료" or "작동중" or "정지(정상)" or "로그인"
+                "정상" or "출고완료" or "작동중" or "동작중" or "정지(정상)" or "로그인" or "연결됨"
                     => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
                 "불량" or "오류" or "실패" or "로그아웃"
                     => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
-                "대기" or "출고대기" or "처리중"
+                "대기" or "출고대기" or "처리중" or "연결전" or "정지중" or "재개중"
                     => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
-                "출고중" or "작동" or "이동중"
+                "출고중" or "작동" or "이동중" or "시작중..."
                     => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
                 "OCR실패" or "분류실패"
                     => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
@@ -39,7 +39,7 @@ namespace MasterAdmin
             {
                 "오류" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
                 "경고" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
-                _     => new SolidColorBrush(Color.FromRgb(100, 116, 139))
+                _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
             };
         }
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
