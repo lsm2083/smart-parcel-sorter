@@ -23,6 +23,7 @@ app = Flask(__name__)
 
 cap = None
 latest_frame = None
+stream_frame = None
 frame_lock = threading.Lock()
 
 scan_requested = False
@@ -71,7 +72,7 @@ def scan_worker(package_id):
     print("[VISION] 스캔 시작:", package_id)
 
     start_time = time.time()
-    timeout = 7
+    timeout = 15
 
     qr_sent = False
     ocr_sent = False
@@ -104,18 +105,23 @@ def scan_worker(package_id):
                 invoice_no = parts[1] if len(parts) > 1 else ""
 
                 qr_data = {
-                    "package_id": package_id,
-                    "scan_type": "QR",
-                    "invoice_no": invoice_no,
+                    "trackingNumber": invoice_no,
+                    "recognitionType": "QR",
                     "region": region,
-                    "package_type": "BOX",
-                    "sort_code": f"{region}_BOX"
+                    "status": "정상",
+                    "errorType": "",
+                    "imagePath": ""
                 }
+
+                print(f"[DEBUG] 토픽: {VISION_SCAN_RESULT}")
+                print(f"[DEBUG] 데이터: {qr_data}")
 
                 agent.publish_event(VISION_SCAN_RESULT, qr_data)
                 print("[MQTT] QR 결과 전송 완료")
 
                 qr_sent = True
+            else:
+                print("[QR] 탐색 중...")
 
         # -------------------------
         # OCR 독립 인식
@@ -136,14 +142,22 @@ def scan_worker(package_id):
             print("[OCR] 신뢰도:", ocr_confidence)
 
             if ocr_text and ocr_confidence >= 0.25:
-                agent.publish_event(VISION_SCAN_RESULT, {
-                    "package_id": package_id,
-                    "scan_type": "OCR",
-                    "ocr_text": ocr_text,
-                    "ocr_confidence": ocr_confidence
-                })
+                ocr_data = {
+                    "trackingNumber": package_id,
+                    "recognitionType": "OCR",
+                    "region": "-",
+                    "status": "정상",
+                    "errorType": "",
+                    "imagePath": ""
+                }
+
+                print(f"[DEBUG] 토픽: {VISION_SCAN_RESULT}")
+                print(f"[DEBUG] 데이터: {ocr_data}")
+
+                agent.publish_event(VISION_SCAN_RESULT, ocr_data)
 
                 print("[MQTT] OCR 결과 전송 완료")
+
                 ocr_sent = True
 
         # QR/OCR 둘 다 끝나면 종료
@@ -156,17 +170,25 @@ def scan_worker(package_id):
     print("[VISION] 스캔 종료")
 
     if not qr_sent:
-        agent.publish_event(VISION_FAIL, {
-            "type": "SCAN_FAIL",
-            "package_id": package_id,
-            "reason": "QR_FAILED"
-        })
+        fail_data = {
+            "trackingNumber": package_id,
+            "recognitionType": "QR",
+            "region": "-",
+            "status": "불량",
+            "errorType": "QR인식실패",
+            "imagePath": "blackbox/qr_fail/test.jpg"
+        }
+
+        print(f"[DEBUG] 토픽: {VISION_FAIL}")
+        print(f"[DEBUG] 데이터: {fail_data}")
+
+        agent.publish_event(VISION_FAIL, fail_data)
 
     scan_running = False
 
 
 def camera_loop():
-    global cap, latest_frame, scan_requested, scan_running
+    global cap, latest_frame, stream_frame, scan_requested, scan_running
 
     cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
 
@@ -213,8 +235,8 @@ def camera_loop():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         with frame_lock:
-            latest_frame = frame.copy()
-            stream_frame = display_frame.copy()
+            latest_frame = frame.copy()           # QR/OCR 인식용 원본
+            stream_frame = display_frame.copy()   # WPF 표시용
 
         if scan_requested and not scan_running:
             scan_requested = False
@@ -229,13 +251,13 @@ def camera_loop():
 
 
 def generate():
-    global latest_frame
+    global stream_frame
 
     while True:
         with frame_lock:
-            if latest_frame is None:
+            if stream_frame is None:
                 continue
-            frame = latest_frame.copy()
+            frame = stream_frame.copy()
 
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
         ret, jpeg = cv2.imencode(".jpg", frame, encode_param)
@@ -272,4 +294,13 @@ if __name__ == "__main__":
     print("[FLASK] stream server start")
     print("[MQTT] agent connect start")
 
-    agent.connect()
+    try:
+        agent.connect()
+
+    except KeyboardInterrupt:
+        print("\n[SYSTEM] 프로그램 종료")
+
+        if cap is not None:
+            cap.release()
+
+        cv2.destroyAllWindows()
