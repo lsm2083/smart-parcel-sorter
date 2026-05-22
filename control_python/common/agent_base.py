@@ -1,6 +1,16 @@
+import sys
+import os
 import json
 import paho.mqtt.client as mqtt
-from topics import SYSTEM_EMERGENCY
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+COMMON_DIR = os.path.join(PROJECT_DIR, "common")
+
+if COMMON_DIR not in sys.path:
+    sys.path.insert(0, COMMON_DIR)
+
+from common.topics import SYSTEM_EMERGENCY
 
 
 class AgentBase:
