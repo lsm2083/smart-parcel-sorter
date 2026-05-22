@@ -66,7 +66,8 @@ class VisionAgent(AgentBase):
                 })
 
     def scan_package(self):
-        cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        stream_url = "http://192.168.0.6:8081/stream"
+        cap = cv2.VideoCapture(stream_url)
 
         if not cap.isOpened():
             print("[VISION] 카메라 열기 실패")
@@ -98,7 +99,7 @@ class VisionAgent(AgentBase):
 
                 _, buffer = cv2.imencode(
                     '.jpg',
-                    frame,
+                    display_frame,
                     encode_param
                 )
 
@@ -122,6 +123,47 @@ class VisionAgent(AgentBase):
             y2 = int(h * 0.825)
 
             qr_text, bbox = detect_qr(frame)
+
+            display_frame = frame.copy()
+
+            # QR 인식됐을 때만 QR 박스 표시
+            if bbox is not None:
+                points = bbox[0]
+
+                for i in range(len(points)):
+                    pt1 = tuple(points[i])
+                    pt2 = tuple(points[(i + 1) % len(points)])
+                    cv2.line(display_frame, pt1, pt2, (0, 255, 0), 2)
+
+                cv2.putText(
+                    display_frame,
+                    "QR Detected",
+                    tuple(points[0]),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 255, 0),
+                    2
+                )
+
+            # QR 인식 후 OCR 대기 중일 때만 OCR AREA 표시
+            if qr_data and qr_detect_time:
+                cv2.rectangle(
+                    display_frame,
+                    (x1, y1),
+                    (x2, y2),
+                    (255, 0, 0),
+                    2
+                )
+
+                cv2.putText(
+                    display_frame,
+                    "OCR AREA",
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 0, 0),
+                    2
+                )
 
             # QR 첫 인식
             if qr_text and qr_data is None:
