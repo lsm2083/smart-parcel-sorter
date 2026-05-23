@@ -2,63 +2,73 @@ const int stepPin = 9;
 const int dirPin = 8;
 const int enaPin = 7;
 const int emergencyPin = 3;
+const int buzzerPin = 6;
 
 const int SENSOR_PINS[10] = {22, 24, 26, 28, 30, 32, 34, 36, 38, 40};
 const int SENSOR_COUNT = 2;
 
 bool emergencyStop = false;
-unsigned long lastSensorPrint = 0;
+bool lastSensorState = false;
+unsigned long lastStatusPrint = 0;
 bool conveyorRunning = false;
-bool dirForward = true;  // true = 정방향, false = 역방향
+bool dirForward = true;
 
 void setup() {
   pinMode(stepPin, OUTPUT);
   pinMode(dirPin, OUTPUT);
   pinMode(enaPin, OUTPUT);
   pinMode(emergencyPin, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW);
 
   for (int i = 0; i < SENSOR_COUNT; i++) {
-    pinMode(SENSOR_PINS[i], INPUT_PULLUP);
+    pinMode(SENSOR_PINS[i], INPUT);
   }
 
   digitalWrite(dirPin, HIGH);
   digitalWrite(enaPin, LOW);
 
   Serial.begin(9600);
-  Serial.println("시스템 시작. 비상정지 버튼 D3.");
-  Serial.println("명령: CONVEYOR_START / CONVEYOR_STOP / DIR_FORWARD / DIR_BACKWARD / DIR_TOGGLE");
+  Serial.println("READY");
 }
 
 void loop() {
   handleSerial();
 
+  // 비상정지 발동
   if (digitalRead(emergencyPin) == HIGH) {
     if (!emergencyStop) {
       emergencyStop = true;
       digitalWrite(enaPin, HIGH);
+      tone(buzzerPin, 1000);
       Serial.println("EVENT:PHYSICAL_ESTOP");
     }
-    return;
+    return;  // 펄스 안 보냄 → 컨베이어 멈춤
   }
 
-  if (emergencyStop) {
+  // 비상정지 해제 - 이 블록만 교체
+if (emergencyStop) {
     emergencyStop = false;
+    conveyorRunning = true;    // ← 이 한 줄 추가
     digitalWrite(enaPin, LOW);
-    Serial.println("비상정지 해제. 재시작!");
-  }
+    noTone(buzzerPin);
+    Serial.println("EVENT:ESTOP_RELEASED");
+}
 
-  if (millis() - lastSensorPrint >= 500) {
-    lastSensorPrint = millis();
-    for (int i = 0; i < SENSOR_COUNT; i++) {
-      int val = digitalRead(SENSOR_PINS[i]);
-      Serial.print("센서");
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(val == LOW ? "감지" : "없음");
-      Serial.print("  ");
+ // loop() 안에 추가
+if (millis() - lastStatusPrint >= 1000) {
+    lastStatusPrint = millis();
+    if (conveyorRunning) {
+        Serial.println("STATUS:speed=500");
     }
-    Serial.println();
-  }
+}
+
+bool curState = (digitalRead(SENSOR_PINS[0]) == LOW);  // LOW = 감지
+if (curState && !lastSensorState) {
+    Serial.println("EVENT:PACKAGE_DETECTED");
+    Serial.println("EVENT:SCAN_POSITION_ARRIVED");
+}
+lastSensorState = curState;
 
   if (conveyorRunning) {
     digitalWrite(stepPin, HIGH);
@@ -86,6 +96,7 @@ void handleSerial() {
     } else if (cmd == "EMERGENCY_STOP") {
       conveyorRunning = false;
       digitalWrite(enaPin, HIGH);
+      noTone(buzzerPin);
       Serial.println("OK:EMERGENCY_STOP");
 
     } else if (cmd == "DIR_FORWARD") {
