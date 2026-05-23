@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SocketIOClient;
 //using SocketIO.Core;
@@ -577,7 +577,12 @@ namespace MasterAdmin
                 "robotStatus",
                 "robot_status"))
             {
-                vm.DeviceStatus.RobotArmStatus = robotArmStatus;
+                // 로봇팔은 MQTT가 직접 상태를 받는 구조이므로,
+                // MQTT 연결이 살아있을 때는 Flask api/status 값으로 덮어쓰지 않습니다.
+                if (!vm.IsRobotMqttConnected)
+                {
+                    vm.DeviceStatus.RobotArmStatus = robotArmStatus;
+                }
             }
 
             if (TryGetString(normalized, out string ocrCamStatus,
@@ -722,7 +727,13 @@ namespace MasterAdmin
                             break;
 
                         case "robot_agent_01":
-                            vm.DeviceStatus.RobotArmStatus = label;
+                            // 로봇팔은 MQTT 상태를 우선 사용합니다.
+                            // Flask device_connected/device_disconnected 이벤트가 늦게 도착해도
+                            // WPF 화면에서 로봇팔 상태가 오프라인으로 덮이지 않도록 막습니다.
+                            if (!vm.IsRobotMqttConnected)
+                            {
+                                vm.DeviceStatus.RobotArmStatus = label;
+                            }
                             break;
 
                         case "vision_agent_01":

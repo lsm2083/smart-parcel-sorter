@@ -1,4 +1,4 @@
-<UserControl x:Class="MasterAdmin.FieldPage"
+﻿<UserControl x:Class="MasterAdmin.FieldPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -348,53 +348,213 @@
 
                 <!-- 로봇팔 -->
                 <Border Grid.Column="3" Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="로봇팔 상태" Style="{StaticResource SecTitle}"/>
-                        <Border Background="#0A1628" CornerRadius="6" Height="160" Margin="0,0,0,10">
-                            <Canvas>
-                                <Rectangle Canvas.Left="55" Canvas.Top="148" Width="40" Height="8" Fill="#334155" RadiusX="2" RadiusY="2"/>
-                                <Line X1="75" Y1="148" X2="50" Y2="105" Stroke="#38BDF8" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                <Line X1="50" Y1="105" X2="95" Y2="68"  Stroke="#38BDF8" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                <Line X1="95" Y1="68"  X2="130" Y2="52" Stroke="#60A5FA" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                <Ellipse Canvas.Left="68"  Canvas.Top="141" Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
-                                <Ellipse Canvas.Left="43"  Canvas.Top="98"  Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
-                                <Ellipse Canvas.Left="88"  Canvas.Top="61"  Width="14" Height="14" Fill="#1E40AF" Stroke="#60A5FA" StrokeThickness="2"/>
-                                <Line X1="130" Y1="52" X2="145" Y2="44" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                <Line X1="130" Y1="52" X2="145" Y2="60" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            </Canvas>
-                        </Border>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="55"/>
-                                <ColumnDefinition/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="로봇팔" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
-                            <TextBlock Grid.Column="1" FontSize="11"
-                         Text="{Binding DeviceStatus.RobotArmStatus}"
-                         Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
-                        </Grid>
-                        <Grid Margin="0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="55"/>
-                                <ColumnDefinition/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="투입부" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
-                            <TextBlock Grid.Column="1" FontSize="11"
-                         Text="{Binding DeviceStatus.InputUnitStatus}"
-                         Foreground="{Binding DeviceStatus.InputUnitStatus, Converter={StaticResource StatusToColor}}"/>
-                        </Grid>
-                        <Separator Background="{DynamicResource BorderLine}" Margin="0,5"/>
-                        <Grid Margin="0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="55"/>
-                                <ColumnDefinition/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="비상정지" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
-                            <TextBlock Grid.Column="1" FontSize="11"
-                         Text="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyText}}"
-                         Foreground="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyColor}}"/>
-                        </Grid>
-                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="로봇팔 상태" Style="{StaticResource SecTitle}"/>
+
+                            <Border Background="#0A1628" CornerRadius="6" Height="160" Margin="0,0,0,10">
+                                <Canvas RenderTransformOrigin="0.5,0.5">
+                                    <Canvas.RenderTransform>
+                                        <RotateTransform Angle="0"/>
+                                    </Canvas.RenderTransform>
+                                    <Canvas.Style>
+                                        <Style TargetType="Canvas">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRobotBusy}" Value="True">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard x:Name="RobotBusyStoryboard">
+                                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                <DoubleAnimation
+                                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                    From="-3"
+                                                                    To="3"
+                                                                    Duration="0:0:0.45"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="RobotBusyStoryboard"/>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Canvas.Style>
+
+                                    <Rectangle Canvas.Left="55" Canvas.Top="148" Width="40" Height="8" Fill="#334155" RadiusX="2" RadiusY="2"/>
+                                    <Line X1="75" Y1="148" X2="50" Y2="105" Stroke="#38BDF8" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                    <Line X1="50" Y1="105" X2="95" Y2="68"  Stroke="#38BDF8" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                    <Line X1="95" Y1="68"  X2="130" Y2="52" Stroke="#60A5FA" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                    <Ellipse Canvas.Left="68"  Canvas.Top="141" Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
+                                    <Ellipse Canvas.Left="43"  Canvas.Top="98"  Width="14" Height="14" Fill="#1E40AF" Stroke="#38BDF8" StrokeThickness="2"/>
+                                    <Ellipse Canvas.Left="88"  Canvas.Top="61"  Width="14" Height="14" Fill="#1E40AF" Stroke="#60A5FA" StrokeThickness="2"/>
+                                    <Line X1="130" Y1="52" X2="145" Y2="44" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                    <Line X1="130" Y1="52" X2="145" Y2="60" Stroke="#94A3B8" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                </Canvas>
+                            </Border>
+
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="로봇팔" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
+                                <TextBlock Grid.Column="1" FontSize="11"
+                                           Text="{Binding DeviceStatus.RobotArmStatus}"
+                                           Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="MQTT" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
+                                <TextBlock Grid.Column="1" FontSize="11"
+                                           Text="{Binding IsRobotMqttConnected}"
+                                           Foreground="{Binding DeviceStatus.RobotArmStatus, Converter={StaticResource StatusToColor}}"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="동작중" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
+                                <TextBlock Grid.Column="1" FontSize="11"
+                                           Text="{Binding IsRobotBusy}"
+                                           Foreground="#38BDF8"/>
+                            </Grid>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="투입부" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
+                                <TextBlock Grid.Column="1" FontSize="11"
+                                           Text="{Binding DeviceStatus.InputUnitStatus}"
+                                           Foreground="{Binding DeviceStatus.InputUnitStatus, Converter={StaticResource StatusToColor}}"/>
+                            </Grid>
+
+                            <Separator Background="{DynamicResource BorderLine}" Margin="0,5"/>
+
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="비상정지" FontSize="11" Foreground="{DynamicResource FgMuted}"/>
+                                <TextBlock Grid.Column="1" FontSize="11"
+                                           Text="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyText}}"
+                                           Foreground="{Binding IsEmergencyStop, Converter={StaticResource BoolToEmergencyColor}}"/>
+                            </Grid>
+
+                            <TextBlock Text="{Binding RobotLastMessage}"
+                                       TextWrapping="Wrap"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource FgSecondary}"
+                                       Margin="0,6,0,4"/>
+
+                            <TextBlock Text="{Binding RobotCameraUrl}"
+                                       TextWrapping="Wrap"
+                                       FontSize="9"
+                                       Foreground="#38BDF8"
+                                       Margin="0,0,0,6"/>
+
+                            <TextBlock Text="관절값" FontSize="10" Foreground="{DynamicResource FgMuted}" Margin="0,4,0,1"/>
+                            <TextBlock Text="{Binding RobotAnglesText}" FontSize="9" Foreground="{DynamicResource FgSecondary}" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="좌표값" FontSize="10" Foreground="{DynamicResource FgMuted}" Margin="0,4,0,1"/>
+                            <TextBlock Text="{Binding RobotCoordsText}" FontSize="9" Foreground="{DynamicResource FgSecondary}" TextWrapping="Wrap"/>
+
+                            <Separator Background="{DynamicResource BorderLine}" Margin="0,8"/>
+
+                            <TextBlock Text="로봇 제어" Style="{StaticResource SecTitle}" Margin="0,0,0,5"/>
+
+                            <UniformGrid Columns="2" Margin="0,0,0,4">
+                                <Button Style="{StaticResource SmallBtn}" Content="HOME" Command="{Binding RobotHomeCommand}" Margin="0,0,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="좌표" Command="{Binding RobotGetPoseCommand}" Margin="3,0,0,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="집게 열기" Command="{Binding RobotOpenGripperCommand}" Margin="0,3,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="집게 닫기" Command="{Binding RobotCloseGripperCommand}" Margin="3,3,0,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="집기준비" Command="{Binding RobotPickReadyCommand}" Margin="0,3,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="상태확인" Command="{Binding RobotStatusCommand}" Margin="3,3,0,3"/>
+                            </UniformGrid>
+
+                            <UniformGrid Columns="2" Margin="0,0,0,4">
+                                <Button Content="STOP" Command="{Binding RobotStopCommand}"
+                                        Background="#7F1D1D" Foreground="#FECACA" BorderThickness="0"
+                                        FontSize="10" Padding="8,4" Cursor="Hand" Margin="0,0,3,3">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                <Button Content="비상해제" Command="{Binding RobotResetEmergencyCommand}"
+                                        Background="#14532D" Foreground="#BBF7D0" BorderThickness="0"
+                                        FontSize="10" Padding="8,4" Cursor="Hand" Margin="3,0,0,3">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </UniformGrid>
+
+                            <TextBlock Text="슬롯 위치 테스트" Style="{StaticResource SecTitle}" Margin="0,4,0,5"/>
+
+                            <UniformGrid Columns="3" Margin="0,0,0,4">
+                                <Button Style="{StaticResource SmallBtn}" Content="1" Command="{Binding RobotPlaceTestCommand}" CommandParameter="1" Margin="0,0,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="2" Command="{Binding RobotPlaceTestCommand}" CommandParameter="2" Margin="3,0,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="3" Command="{Binding RobotPlaceTestCommand}" CommandParameter="3" Margin="3,0,0,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="4" Command="{Binding RobotPlaceTestCommand}" CommandParameter="4" Margin="0,3,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="5" Command="{Binding RobotPlaceTestCommand}" CommandParameter="5" Margin="3,3,3,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="6" Command="{Binding RobotPlaceTestCommand}" CommandParameter="6" Margin="3,3,0,3"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="7" Command="{Binding RobotPlaceTestCommand}" CommandParameter="7" Margin="0,3,3,0"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="8" Command="{Binding RobotPlaceTestCommand}" CommandParameter="8" Margin="3,3,3,0"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="9" Command="{Binding RobotPlaceTestCommand}" CommandParameter="9" Margin="3,3,0,0"/>
+                            </UniformGrid>
+
+                            <TextBlock Text="실제 SORT 테스트" Style="{StaticResource SecTitle}" Margin="0,8,0,5"/>
+
+                            <UniformGrid Columns="3">
+                                <Button Content="SORT 1" Command="{Binding RobotSortTestCommand}" CommandParameter="1"
+                                        Background="#1E40AF" Foreground="#BFDBFE" BorderThickness="0" FontSize="10" Padding="8,4" Cursor="Hand" Margin="0,0,3,3">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                <Button Content="SORT 5" Command="{Binding RobotSortTestCommand}" CommandParameter="5"
+                                        Background="#1E40AF" Foreground="#BFDBFE" BorderThickness="0" FontSize="10" Padding="8,4" Cursor="Hand" Margin="3,0,3,3">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                <Button Content="SORT 9" Command="{Binding RobotSortTestCommand}" CommandParameter="9"
+                                        Background="#1E40AF" Foreground="#BFDBFE" BorderThickness="0" FontSize="10" Padding="8,4" Cursor="Hand" Margin="3,0,0,3">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </UniformGrid>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </Grid>
 
