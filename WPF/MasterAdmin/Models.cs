@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 
 namespace MasterAdmin
 {
@@ -14,6 +15,30 @@ namespace MasterAdmin
         public double ProcessingTime { get; set; }
         public double Confidence { get; set; }
         public string? ImagePath { get; set; }
+    }
+
+    public class ErrorLog
+    {
+        [JsonProperty("id")]
+        public int Id { get; set; }
+
+        [JsonProperty("package_id")]
+        public int PackageId { get; set; }
+
+        [JsonProperty("error_code")]
+        public string? ErrorCode { get; set; }
+
+        [JsonProperty("device_id")]
+        public string? DeviceId { get; set; }
+
+        [JsonProperty("message")]
+        public string? Message { get; set; }
+
+        [JsonProperty("image_path")]
+        public string? ImagePath { get; set; }
+
+        [JsonProperty("created_at")]
+        public DateTime CreatedAt { get; set; }
     }
 
     public class ShippingLog

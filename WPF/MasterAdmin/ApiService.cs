@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Linq;
 
 namespace MasterAdmin
 {
@@ -73,19 +74,76 @@ namespace MasterAdmin
             }
         }
 
-        private async Task LoadSortLogsAsync(MainViewModel vm)
+        public async Task LoadSortLogsAsync(MainViewModel vm)
         {
             try
             {
+                // 성공 로그 가져오기
                 var json = await _http.GetStringAsync("api/logs/sort");
                 var logs = Deserialize<List<SortingLog>>(json) ?? new();
 
+                // 실패 로그 가져오기
+                var errorJson = await _http.GetStringAsync("api/logs/error");
+
+                var obj = JObject.Parse(errorJson);
+
+                var errorLogs =
+                    obj["logs"]?.ToObject<List<ErrorLog>>() ?? new();
+
+                // 성공 + 실패 로그 합치기
+                List<SortingLog> mergedLogs = new();
+
+                // 성공 로그 추가
+                foreach (var l in logs)
+                {
+                    mergedLogs.Add(l);
+                }
+
+                // 실패 로그 추가
+                foreach (var e in errorLogs)
+                {
+                    mergedLogs.Add(new SortingLog
+                    {
+                        Id = e.Id,
+
+                        Timestamp = e.CreatedAt,
+
+                        TrackingNumber = $"FAIL-{e.PackageId}",
+
+                        RecognitionType =
+                            e.ErrorCode != null &&
+                            e.ErrorCode.Contains("QR")
+                            ? "QR"
+                            : "OCR",
+
+                        Region = "-",
+
+                        Status = "불량",
+
+                        ErrorType = e.Message ?? "",
+
+                        ProcessingTime = 0,
+
+                        Confidence = 0,
+
+                        ImagePath = e.ImagePath
+                    });
+                }
+
+                // 시간 기준 최신순 정렬
+                mergedLogs = mergedLogs
+                    .OrderByDescending(x => x.Timestamp)
+                    .ToList();
+
+                // 화면 반영
                 Dispatch(() =>
                 {
                     vm.SortingLogs.Clear();
 
-                    foreach (var l in logs)
-                        vm.SortingLogs.Add(l);
+                    foreach (var log in mergedLogs)
+                    {
+                        vm.SortingLogs.Add(log);
+                    }
                 });
             }
             catch (Exception ex)

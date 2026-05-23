@@ -262,6 +262,7 @@ namespace MasterAdmin
             _timer.Tick += async (_, _) =>
             {
                 CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
                 _tick++;
 
                 if (!_statusPolling)
@@ -278,9 +279,10 @@ namespace MasterAdmin
                     }
                 }
 
-                if (!IsRobotMqttConnected && !_robotMqttConnecting)
+                // 3초마다 분류 로그 새로고침
+                if (_tick % 3 == 0)
                 {
-                    _ = ConnectRobotMqttAsync();
+                    await _api.LoadSortLogsAsync(this);
                 }
             };
 
