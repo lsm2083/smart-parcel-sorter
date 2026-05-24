@@ -47,6 +47,12 @@ def emit_conveyor_status(motor, actuator, speed=0):
     socketio.emit('conveyor_status_changed', {
         'motor': motor, 'actuator': actuator, 'speed': speed
     })
+    # WPF device_status 형식으로도 발행
+    status_label = '작동중' if motor == 'ON' else '정지'
+    socketio.emit('device_status', {
+        'conveyorSpeed': speed,
+        'conveyorStatus': status_label
+    })
 
 def emit_robot_status(status, package_id=None):
     socketio.emit('robot_status_changed', {

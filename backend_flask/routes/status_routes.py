@@ -3,13 +3,32 @@ from database.db import get_db
 
 status_bp = Blueprint('status', __name__)
 
+_conveyor_speed = 0
+_conveyor_status_label = '연결전'
+_is_emergency = False
+
+
+def update_emergency(value):
+    global _is_emergency
+    _is_emergency = value
+
+def update_conveyor_realtime(speed, status):
+    global _conveyor_speed, _conveyor_status_label
+    _conveyor_speed = speed
+    _conveyor_status_label = status
+
+
+def update_conveyor_connected():
+    global _conveyor_status_label
+    if _conveyor_status_label == '연결전':
+        _conveyor_status_label = '연결완료'
+
 
 @status_bp.route('/status')
 def get_status():
     conn = get_db()
     cur = conn.cursor()
 
-    # 장비 상태 조회
     cur.execute("SELECT device_id, status FROM device_status")
     devices = {row['device_id']: row['status'] for row in cur.fetchall()}
 
@@ -17,7 +36,6 @@ def get_status():
         s = devices.get(device_id, 'DISCONNECTED')
         return {'ONLINE': '작동중', 'DISCONNECTED': '오프라인'}.get(s, s)
 
-    # 오늘 통계
     cur.execute(
         "SELECT COUNT(*) AS cnt FROM sort_logs WHERE DATE(completed_at)=CURDATE() AND sort_result='SORT_DONE'"
     )
@@ -37,12 +55,12 @@ def get_status():
     conn.close()
 
     return jsonify({
-        "conveyorStatus":   label('conveyor'),
-        "conveyorSpeed":    1.3,
+        "conveyorStatus":   _conveyor_status_label,
+        "conveyorSpeed":    _conveyor_speed,
         "robotArmStatus":   label('robot'),
         "ocrCamStatus":     label('vision'),
         "qrCamStatus":      label('vision'),
-        "emergencyStop":    False,
+        "emergencyStop":    _is_emergency,
         "inputUnitStatus":  "대기",
         "todaySortedCount": today_sorted,
         "todayErrorCount":  today_error,
