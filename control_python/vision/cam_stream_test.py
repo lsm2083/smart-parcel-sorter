@@ -1,47 +1,16 @@
 import os
-import sys
 import cv2
 import time
 import json
 import threading
-from flask import Flask, Response
 import collections
 
 # 30fps * 4초 = 120프레임
 PRE_BUFFER_SIZE = 120
 pre_buffer = collections.deque(maxlen=PRE_BUFFER_SIZE)
 
-# =========================
-# 경로 설정
-# =========================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
-
-if PROJECT_DIR not in sys.path:
-    sys.path.insert(0, PROJECT_DIR)
-
-from common.agent_base import AgentBase
-from common.topics import VISION_COMMAND, VISION_SCAN_RESULT, VISION_FAIL
-from vision.qr_reader import detect_qr
-from vision.ocr_reader import detect_ocr
-
-
-# =========================
-# 설정
-# =========================
-BROKER_HOST = "192.168.0.21"
-
-SCAN_DELAY = 5.0  # start_scan이 오고나서 X초후에 인식
-DEVICE_ID = "vision"
-
-STREAM_HOST = "0.0.0.0"
-STREAM_PORT = 8081
-STREAM_URL = "http://192.168.0.6:8081/stream"
-
 CAMERA_INDEX = 1
 SCAN_TIMEOUT = 15
-
-app = Flask(__name__)
 
 cap = None
 latest_frame = None
@@ -54,8 +23,78 @@ current_package_id = None
 show_ocr_area = False
 ocr_box = None
 
+# =========================
+# 더미 MQTT (테스트용)
+# =========================
+class DummyAgent:
+    def publish_event(self, topic, data):
+        print(f"\n{'='*50}")
+        print(f"[MQTT 전송 시뮬레이션]")
+        print(f"  토픽: {topic}")
+        print(f"  데이터: {json.dumps(data, ensure_ascii=False, indent=2)}")
+        print(f"{'='*50}\n")
 
-# 글자위치를 따라가는 ocr area
+agent = DummyAgent()
+
+VISION_SCAN_RESULT = "parcel/vision/scan_result"
+VISION_FAIL = "parcel/vision/fail"
+
+# =========================
+# OCR (easyocr)
+# =========================
+import easyocr
+reader = easyocr.Reader(["ko", "en"], gpu=False)
+
+def detect_ocr(frame):
+    h, w = frame.shape[:2]
+    max_width = 500
+    if w > max_width:
+        scale = max_width / w
+        frame = cv2.resize(frame, None, fx=scale, fy=scale)
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    thresh = cv2.adaptiveThreshold(blur, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 21, 5)
+
+    results = reader.readtext(thresh, detail=1, paragraph=False, batch_size=1)
+
+    texts = []
+    confidences = []
+    for bbox, text, confidence in results:
+        if confidence < 0.25:
+            continue
+        texts.append(text)
+        confidences.append(confidence)
+
+    full_text = " ".join(texts)
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+
+    return {"text": full_text, "confidence": avg_confidence, "raw": results}
+
+# =========================
+# QR
+# =========================
+def detect_qr(frame):
+    try:
+        from pyzbar.pyzbar import decode
+        decoded = decode(frame)
+        for obj in decoded:
+            try:
+                data = obj.data.decode("utf-8")
+            except:
+                data = obj.data.decode("cp949")
+            points = obj.polygon
+            bbox = [[p.x, p.y] for p in points]
+            return data, [bbox]
+    except:
+        pass
+    return None, None
+
+# =========================
+# 글자 영역 탐지
+# =========================
 def find_text_area(frame):
     h, w = frame.shape[:2]
     mx1, my1 = int(w * 0.15), int(h * 0.15)
@@ -90,81 +129,22 @@ def find_text_area(frame):
     y2 = min(max(c[3] for c in candidates) + 10 + my1, h)
     return x1, y1, x2, y2
 
-
 # =========================
 # QR 파싱
 # =========================
 def parse_qr_text(qr_text):
-    """
-    지원 QR 형식 1:
-    SEOUL|2505230001|BOX
-
-    지원 QR 형식 2:
-    {
-        "invoice_no": "2505230001",
-        "region": "SEOUL",
-        "package_type": "BOX"
-    }
-    """
-
     qr_text = qr_text.strip()
-
-    # JSON QR 형식
     if qr_text.startswith("{"):
         data = json.loads(qr_text)
-
         region = data.get("region", "UNKNOWN")
         invoice_no = data.get("invoice_no", data.get("trackingNumber", "UNKNOWN"))
         package_type = data.get("package_type", "BOX")
-
         return region, invoice_no, package_type
-
-    # | 구분자 QR 형식
     parts = qr_text.split("|")
-
     region = parts[0].strip() if len(parts) > 0 and parts[0].strip() else "UNKNOWN"
     invoice_no = parts[1].strip() if len(parts) > 1 and parts[1].strip() else "UNKNOWN"
     package_type = parts[2].strip() if len(parts) > 2 and parts[2].strip() else "BOX"
-
     return region, invoice_no, package_type
-
-
-# =========================
-# Vision Agent
-# =========================
-class VisionStreamAgent(AgentBase):
-    def __init__(self, broker_host):
-        super().__init__(
-            broker_host,
-            DEVICE_ID,
-            "VISION",
-            VISION_COMMAND,
-            "parcel/vision/result"
-        )
-
-    def _on_connect(self, client, userdata, flags, rc):
-        super()._on_connect(client, userdata, flags, rc)
-
-        self.publish_event(f"parcel/{self.device_id}/status", {
-            "status": "ONLINE",
-            "device_id": self.device_id,
-            "device_type": self.device_type,
-            "stream_url": STREAM_URL
-        })
-
-    def handle_command(self, data):
-        global scan_requested, current_package_id
-
-        cmd = data.get("command")
-
-        if cmd == "START_SCAN":
-            current_package_id = data.get("package_id", "UNKNOWN")
-            scan_requested = True
-            print("[VISION] START_SCAN 요청:", current_package_id)
-
-
-agent = VisionStreamAgent(BROKER_HOST)
-
 
 # =========================
 # 스캔 작업
@@ -176,7 +156,7 @@ def scan_worker(package_id):
     show_ocr_area = False
     ocr_box = None
 
-    print("[VISION] 스캔 대기 시작:", package_id)
+    print(f"\n[VISION] 스캔 대기 시작: package_id={package_id}")
     print("[VISION] 박스 감지 대기 중...")
 
     # 박스 감지될 때까지 대기
@@ -206,7 +186,6 @@ def scan_worker(package_id):
     time.sleep(0.3)
 
     start_time = time.time()
-
     qr_sent = False
     ocr_sent = False
     last_ocr_time = 0
@@ -219,25 +198,16 @@ def scan_worker(package_id):
 
         h, w, _ = frame.shape
 
-        x1 = int(w * 0.20)
-        x2 = int(w * 0.80)
-        y1 = int(h * 0.175)
-        y2 = int(h * 0.825)
-
         # =========================
         # QR 인식
         # =========================
         if not qr_sent:
             qr_text, bbox = detect_qr(frame)
-
             if qr_text:
                 print("[QR] 인식 성공:", qr_text)
-
                 try:
                     region, invoice_no, package_type = parse_qr_text(qr_text)
-
                     sort_code = f"{region}_{package_type}"
-
                     qr_data = {
                         "package_id": package_id,
                         "scan_type": "QR",
@@ -246,30 +216,16 @@ def scan_worker(package_id):
                         "package_type": package_type,
                         "sort_code": sort_code
                     }
-
-                    print(f"[DEBUG] 토픽: {VISION_SCAN_RESULT}")
-                    print(f"[DEBUG] 데이터: {qr_data}")
-
                     agent.publish_event(VISION_SCAN_RESULT, qr_data)
-                    print("[MQTT] QR 결과 전송 완료")
-
                     qr_sent = True
-
                 except Exception as e:
                     print("[QR] 파싱 실패:", e)
-
-                    fail_data = {
+                    agent.publish_event(VISION_FAIL, {
                         "type": "QR_FAIL",
                         "package_id": package_id,
                         "reason": "QR_PARSE_ERROR"
-                    }
-
-                    print(f"[DEBUG] 토픽: {VISION_FAIL}")
-                    print(f"[DEBUG] 데이터: {fail_data}")
-
-                    agent.publish_event(VISION_FAIL, fail_data)
+                    })
                     qr_sent = True
-
             else:
                 print("[QR] 탐색 중...")
 
@@ -287,73 +243,52 @@ def scan_worker(package_id):
             print("[OCR] 글자 영역:", ocr_box)
             ocr_area = frame[y1:y2, x1:x2].copy()
 
-            print("[OCR] 실행")
+            print("[OCR] 실행 중...")
             ocr_result = detect_ocr(ocr_area)
             ocr_text = ocr_result["text"]
             ocr_confidence = ocr_result["confidence"]
 
             raw = ocr_result.get("raw", [])
-
             if raw:
-                xs = []
-                ys = []
-
+                xs, ys = [], []
                 for bbox, text, conf in raw:
-                    for x, y in bbox:
-                        xs.append(int(x + x1))
-                        ys.append(int(y + y1))
-
+                    for px, py in bbox:
+                        xs.append(int(px + x1))
+                        ys.append(int(py + y1))
                 if xs and ys:
                     ocr_box = (
-                        max(min(xs) - 10, 0),
-                        max(min(ys) - 10, 0),
-                        min(max(xs) + 10, w),
-                        min(max(ys) + 10, h)
+                        max(min(xs)-10, 0),
+                        max(min(ys)-10, 0),
+                        min(max(xs)+10, w),
+                        min(max(ys)+10, h)
                     )
-
                     print("[OCR] 자동 AREA:", ocr_box)
 
-            
             ocr_text = ocr_text.replace("\n", " ").strip()
-
             region = "-"
             name = "-"
 
-            if "부산" in ocr_text:
-                region = "부산"
-            elif "서울" in ocr_text:
-                region = "서울"
-            elif "대구" in ocr_text:
-                region = "대구"
-            elif "인천" in ocr_text:
-                region = "인천"
+            for r in ["부산", "서울", "대구", "인천"]:
+                if r in ocr_text:
+                    region = r
+                    break
 
-            # 예: OCR 결과가 "부산 이승환"이면
             parts = ocr_text.split()
-
             if len(parts) >= 2:
                 name = parts[-1]
 
-            print(f"[OCR] 지역 : {region}")
-            print(f"[OCR] 이름 : {name}")
-
-            print("[OCR] 신뢰도:", ocr_confidence)
+            print(f"[OCR] 텍스트: {ocr_text}")
+            print(f"[OCR] 지역: {region} / 이름: {name}")
+            print(f"[OCR] 신뢰도: {ocr_confidence:.3f}")
 
             if ocr_text and ocr_confidence >= 0.25:
-
-                # 녹화 저장
                 save_dir = r"C:\모블 최종 프로젝트 자료\ocr_인식"
                 os.makedirs(save_dir, exist_ok=True)
                 save_path = os.path.join(save_dir, f"ocr_clip_{package_id}_{int(time.time())}.avi")
-                
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
                 writer = cv2.VideoWriter(save_path, fourcc, 30.0, (640, 480))
-
-                # 이전 0.5초 프레임 먼저 저장
                 for f in list(pre_buffer):
                     writer.write(f)
-
-                # 이후 0.5초 (15프레임) 저장
                 post_count = 0
                 while post_count < 30:
                     with frame_lock:
@@ -361,72 +296,55 @@ def scan_worker(package_id):
                             writer.write(latest_frame.copy())
                             post_count += 1
                     time.sleep(1/30)
-
                 writer.release()
-                print(f"[OCR] 클립 저장 완료: {save_path}")
+                print(f"[OCR] 클립 저장: {save_path}")
 
-                ocr_data = {
+                agent.publish_event(VISION_SCAN_RESULT, {
                     "package_id": package_id,
                     "scan_type": "OCR",
                     "invoice_no": ocr_text,
-                    "region": "-",
+                    "region": region,
                     "package_type": "-",
                     "sort_code": "-"
-                }
-
-                print(f"[DEBUG] 토픽: {VISION_SCAN_RESULT}")
-                print(f"[DEBUG] 데이터: {ocr_data}")
-
-                agent.publish_event(VISION_SCAN_RESULT, ocr_data)
-                print("[MQTT] OCR 결과 전송 완료")
-
+                })
                 ocr_sent = True
 
         if qr_sent and ocr_sent:
-            show_ocr_area = False
-            scan_running = False
-            return
+            break
 
         time.sleep(0.03)
 
-    print("[VISION] 스캔 종료")
-
     if not qr_sent:
-        fail_data = {
+        agent.publish_event(VISION_FAIL, {
             "type": "QR_FAIL",
             "package_id": package_id,
             "reason": "NO_QR_FOUND"
-        }
-
-        print(f"[DEBUG] 토픽: {VISION_FAIL}")
-        print(f"[DEBUG] 데이터: {fail_data}")
-
-        agent.publish_event(VISION_FAIL, fail_data)
+        })
 
     show_ocr_area = False
     scan_running = False
-
+    print("[VISION] 스캔 완료\n[안내] 다시 스캔하려면 스페이스바를 누르세요.")
 
 # =========================
 # 카메라 루프
 # =========================
 def camera_loop():
-    global cap, latest_frame, stream_frame, scan_requested, scan_running, show_ocr_area, ocr_box
+    global cap, latest_frame, stream_frame, scan_requested, scan_running, ocr_box
 
     cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
-
     if not cap.isOpened():
-        print("[CAMERA] 카메라 열기 실패")
-        return
+        print("[CAMERA] 카메라 열기 실패 - 인덱스 0으로 재시도")
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            print("[CAMERA] 카메라 열기 최종 실패")
+            return
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
     print("[CAMERA] 카메라 시작")
 
     while True:
         ret, frame = cap.read()
-
         if not ret or frame is None:
             continue
 
@@ -441,26 +359,36 @@ def camera_loop():
         qr_text, bbox = detect_qr(display_frame)
         if bbox is not None:
             points = bbox[0]
-
             for i in range(len(points)):
                 pt1 = tuple(points[i])
-                pt2 = tuple(points[(i + 1) % len(points)])
+                pt2 = tuple(points[(i+1) % len(points)])
                 cv2.line(display_frame, pt1, pt2, (0, 255, 0), 2)
+            cv2.putText(display_frame, "QR Detected", tuple(points[0]),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-            cv2.putText(
-                display_frame,
-                "QR Detected",
-                tuple(points[0]),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-        
         if scan_running and show_ocr_area:
             text_box = find_text_area(frame)
             if text_box is not None:
                 ocr_box = text_box
+
+        # 박스 감지 대기 중일 때 감지 영역 표시
+        if scan_running and not show_ocr_area:
+            h, w, _ = display_frame.shape
+            cx1, cx2 = int(w * 0.2), int(w * 0.8)
+            cy1, cy2 = int(h * 0.2), int(h * 0.8)
+            cv2.rectangle(display_frame, (cx1, cy1), (cx2, cy2), (0, 255, 255), 1)
+            cv2.putText(display_frame, "WAITING BOX...", (cx1, cy1-10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+
+        # 상태 표시
+        if scan_running:
+            status = "SCANNING..." if show_ocr_area else "WAITING BOX..."
+            color = (0, 0, 255)
+        else:
+            status = "READY - Press SPACE to scan"
+            color = (0, 255, 0)
+        cv2.putText(display_frame, status, (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
         pre_buffer.append(frame.copy())
 
@@ -470,7 +398,6 @@ def camera_loop():
 
         if scan_requested and not scan_running:
             scan_requested = False
-
             threading.Thread(
                 target=scan_worker,
                 args=(current_package_id,),
@@ -479,64 +406,47 @@ def camera_loop():
 
         time.sleep(0.01)
 
-
-# =========================
-# Flask 스트리밍
-# =========================
-def generate():
-    global stream_frame
-
-    while True:
-        with frame_lock:
-            if stream_frame is None:
-                continue
-            frame = stream_frame.copy()
-
-        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-        ret, jpeg = cv2.imencode(".jpg", frame, encode_param)
-
-        if not ret:
-            continue
-
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" +
-            jpeg.tobytes() +
-            b"\r\n"
-        )
-
-        time.sleep(0.03)
-
-
-@app.route("/stream")
-def stream():
-    return Response(
-        generate(),
-        mimetype="multipart/x-mixed-replace; boundary=frame"
-    )
-
-
 # =========================
 # main
 # =========================
 if __name__ == "__main__":
+    print("=" * 50)
+    print("  OCR 테스트 모드 (MQTT 없음)")
+    print("  스페이스바: 스캔 시작")
+    print("  ESC: 종료")
+    print("=" * 50)
+
     threading.Thread(target=camera_loop, daemon=True).start()
+    time.sleep(1.0)
 
-    threading.Thread(
-        target=lambda: app.run(host=STREAM_HOST, port=STREAM_PORT, threaded=True),
-        daemon=True
-    ).start()
-
-    print("[FLASK] stream server start")
-    print("[MQTT] agent connect start")
+    package_counter = 1000
 
     try:
-        agent.connect()
+        while True:
+            with frame_lock:
+                if stream_frame is None:
+                    time.sleep(0.03)
+                    continue
+                frame = stream_frame.copy()
+
+            cv2.imshow("OCR Test", frame)
+            key = cv2.waitKey(1)
+
+            if key == 27:  # ESC
+                break
+            elif key == 32:  # 스페이스바
+                if not scan_running:
+                    current_package_id = package_counter
+                    package_counter += 1
+                    scan_requested = True
+                    print(f"\n[TEST] 스캔 요청 - package_id: {current_package_id}")
+                else:
+                    print("[TEST] 이미 스캔 중입니다.")
 
     except KeyboardInterrupt:
-        print("\n[SYSTEM] 프로그램 종료")
+        print("\n[SYSTEM] 종료 중...")
 
+    finally:
         if cap is not None:
             cap.release()
-
         cv2.destroyAllWindows()

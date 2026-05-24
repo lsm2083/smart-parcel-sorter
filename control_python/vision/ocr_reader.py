@@ -15,8 +15,12 @@ def detect_ocr(frame):
         scale = max_width / w
         frame = cv2.resize(frame, None, fx=scale, fy=scale)
 
-    # 흑백 변환만 간단히
+    # 전처리 기능
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    gray = cv2.adaptiveThreshold(gray, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 21, 5)
 
     # OCR 실행
     results = reader.readtext(
