@@ -140,7 +140,7 @@ namespace MasterAdmin
             => throw new NotImplementedException();
     }
 
-    public class BusyToRobotTextConverter : IValueConverter 
+    public class BusyToRobotTextConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => (value is bool b && b) ? "작업중" : "대기";
@@ -155,6 +155,16 @@ namespace MasterAdmin
             => (value is bool b && b)
                 ? new SolidColorBrush(Color.FromRgb(59, 130, 246))
                 : new SolidColorBrush(Color.FromRgb(34, 197, 94));
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    // 텍스트가 비어있으면 Visible(플레이스홀더 표시), 내용 있으면 Collapsed
+    public class TextToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => string.IsNullOrEmpty(value?.ToString()) ? Visibility.Visible : Visibility.Collapsed;
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();

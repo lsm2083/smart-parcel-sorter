@@ -1,0 +1,92 @@
+<Window x:Class="MasterAdmin.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MasterAdmin Login"
+        Height="900" Width="1440"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowState="Maximized"
+        Background="Transparent">
+
+	<Border Background="#0D1B2A" CornerRadius="12" BorderBrush="#1E3A5F" BorderThickness="1">
+		<Border.Effect>
+			<DropShadowEffect BlurRadius="30" ShadowDepth="0" Color="#000000" Opacity="0.6"/>
+		</Border.Effect>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="44"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+
+			<!-- 타이틀바 -->
+			<Border Grid.Row="0" Background="#111D2B" CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseDown">
+				<Grid>
+					<TextBlock Text="MASTER ADMIN" Foreground="#38BDF8" FontWeight="Bold" FontSize="12"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+					<Button Click="BtnClose_Click" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            Width="24" Height="24" Background="Transparent"
+                            BorderThickness="0" Cursor="Hand" Foreground="#64748B" FontSize="12"
+                            Content="X"/>
+				</Grid>
+			</Border>
+
+			<!-- 본문 -->
+			<StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="480,0,480,20">
+
+				<!-- 아이콘 + 제목 -->
+				<Border Width="56" Height="56" CornerRadius="14" Background="#1E3A5F"
+                        HorizontalAlignment="Center" Margin="0,0,0,12">
+					<TextBlock Text="M" Foreground="#38BDF8" FontSize="24" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Border>
+				<TextBlock Text="관리자 로그인" Foreground="#E2E8F0" FontSize="18" FontWeight="Bold"
+                           HorizontalAlignment="Center" Margin="0,0,0,4"/>
+				<TextBlock Text="통합 관제 시스템" Foreground="#64748B" FontSize="11"
+                           HorizontalAlignment="Center" Margin="0,0,0,28"/>
+
+				<!-- 아이디 -->
+				<TextBlock Text="아이디" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5"/>
+				<Border Background="#1E2A3A" CornerRadius="7" BorderBrush="#1E3A5F" BorderThickness="1" Margin="0,0,0,14">
+					<TextBox x:Name="TxtId" Background="Transparent" BorderThickness="0"
+                             Foreground="#E2E8F0" FontSize="13" Padding="12,8"
+                             KeyDown="Input_KeyDown"/>
+				</Border>
+
+				<!-- 비밀번호 -->
+				<TextBlock Text="비밀번호" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,5"/>
+				<Border Background="#1E2A3A" CornerRadius="7" BorderBrush="#1E3A5F" BorderThickness="1" Margin="0,0,0,6">
+					<PasswordBox x:Name="TxtPw" Background="Transparent" BorderThickness="0"
+                                 Foreground="#E2E8F0" FontSize="13" Padding="12,8"
+                                 KeyDown="Input_KeyDown"/>
+				</Border>
+
+				<!-- 오류 -->
+				<TextBlock x:Name="TxtError" Foreground="#F87171" FontSize="11"
+                           HorizontalAlignment="Center" Margin="0,4,0,10"
+                           Visibility="Collapsed"/>
+
+				<!-- 로그인 버튼 -->
+				<Button x:Name="BtnLogin" Height="42" Margin="0,6,0,0"
+                        Click="BtnLogin_Click" Cursor="Hand"
+                        Background="#1D4ED8" Foreground="White"
+                        FontSize="13" FontWeight="SemiBold" BorderThickness="0">
+					<Button.Template>
+						<ControlTemplate TargetType="Button">
+							<Border Background="{TemplateBinding Background}" CornerRadius="7">
+								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+						</ControlTemplate>
+					</Button.Template>
+					<TextBlock Text="로그인" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+				</Button>
+
+				<TextBlock Text="기본 계정: admin / admin1234" Foreground="#334155"
+                           FontSize="10" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+			</StackPanel>
+		</Grid>
+	</Border>
+</Window>
