@@ -18,6 +18,9 @@ for path in [PROJECT_DIR, COMMON_DIR, AGENTS_DIR]:
 from common.agent_base import AgentBase
 from common.topics import VISION_COMMAND, VISION_SCAN_RESULT, VISION_FAIL
 
+from vision.qr_reader import detect_qr
+from vision.ocr_reader import detect_ocr
+
 
 # =========================
 # 설정

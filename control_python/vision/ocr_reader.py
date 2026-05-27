@@ -1,46 +1,121 @@
-import easyocr
 import cv2
+import easyocr
 
-# 이건 반드시 함수 밖에 있어야 함
+# 반드시 함수 밖에서 1회만 생성합니다.
+# 함수 안에서 Reader를 만들면 OCR 실행마다 모델을 다시 로딩해서 매우 느려집니다.
 reader = easyocr.Reader(["ko", "en"], gpu=False)
 
 
+def _to_easyocr_image(image):
+    if image is None:
+        return None
+
+    if len(image.shape) == 2:
+        return image
+
+    if len(image.shape) == 3 and image.shape[2] == 4:
+        image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+
+    return image
+
+
+def _resize_if_too_large(image, max_width=900):
+    h, w = image.shape[:2]
+
+    if w <= max_width:
+        return image
+
+    scale = max_width / float(w)
+    return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+
+def _sort_ocr_results(results):
+    def key_func(item):
+        bbox, text, confidence = item
+        xs = [p[0] for p in bbox]
+        ys = [p[1] for p in bbox]
+        return (sum(ys) / len(ys), sum(xs) / len(xs))
+
+    return sorted(results, key=key_func)
+
+
+def _normalize_piece(text):
+    text = str(text).strip()
+    text = text.replace("\n", " ").replace("\r", " ")
+    return " ".join(text.split())
+
+
 def detect_ocr(frame):
-    # OCR 영역이 너무 크면 줄이기
-    h, w = frame.shape[:2]
+    if frame is None or frame.size == 0:
+        return {
+            "text": "",
+            "confidence": 0.0,
+            "raw": [],
+            "message": "EMPTY_FRAME"
+        }
 
-    # 너무 큰 이미지만 축소
-    max_width = 500
-    if w > max_width:
-        scale = max_width / w
-        frame = cv2.resize(frame, None, fx=scale, fy=scale)
+    image = _to_easyocr_image(frame)
 
-    # 전처리 기능
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    gray = cv2.adaptiveThreshold(gray, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 21, 5)
+    if image is None or image.size == 0:
+        return {
+            "text": "",
+            "confidence": 0.0,
+            "raw": [],
+            "message": "EMPTY_IMAGE"
+        }
 
-    # OCR 실행
-    results = reader.readtext(
-        gray,
-        detail=1,
-        paragraph=False,
-        batch_size=1
-    )
+    # cam_stream_test.py에서 이미 crop/확대를 수행하므로 여기서는 과한 전처리를 하지 않습니다.
+    # blur/adaptiveThreshold를 넣으면 한글이 뭉개져서 '서울 -> 서움' 같은 오인식이 늘 수 있습니다.
+    image = _resize_if_too_large(image, max_width=900)
+
+    try:
+        results = reader.readtext(
+            image,
+            detail=1,
+            paragraph=False,
+            batch_size=1,
+            workers=0,
+            decoder="greedy",
+            width_ths=1.0,
+            height_ths=0.7,
+            ycenter_ths=0.7,
+            text_threshold=0.30,
+            low_text=0.15,
+            link_threshold=0.35,
+            add_margin=0.04,
+            canvas_size=1280,
+            mag_ratio=1.0,
+            contrast_ths=0.10,
+            adjust_contrast=0.50
+        )
+    except Exception as e:
+        return {
+            "text": "",
+            "confidence": 0.0,
+            "raw": [],
+            "message": f"EASYOCR_EXCEPTION: {e}"
+        }
 
     texts = []
     confidences = []
 
-    for bbox, text, confidence in results:
-        if confidence < 0.25:
+    for bbox, text, confidence in _sort_ocr_results(results):
+        text = _normalize_piece(text)
+
+        if not text:
+            continue
+
+        confidence = float(confidence)
+
+        # 라벨 글자는 confidence가 낮게 나오는 경우가 많아서 낮게 둡니다.
+        # 최종 성공 여부는 cam_stream_test.py의 파싱 결과로 판단합니다.
+        if confidence < 0.05:
             continue
 
         texts.append(text)
         confidences.append(confidence)
 
-    full_text = " ".join(texts)
+    full_text = " ".join(texts).strip()
 
     avg_confidence = 0.0
     if confidences:
@@ -49,5 +124,6 @@ def detect_ocr(frame):
     return {
         "text": full_text,
         "confidence": avg_confidence,
-        "raw": results
+        "raw": results,
+        "message": "OK" if full_text else "NO_TEXT"
     }
