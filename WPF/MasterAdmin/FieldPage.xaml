@@ -87,7 +87,6 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="160"/>
                 <ColumnDefinition Width="170"/>
             </Grid.ColumnDefinitions>
@@ -116,18 +115,8 @@
                     <TextBlock Text="오늘 누적" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="컨베이어 속도" Style="{StaticResource SecTitle}"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding DeviceStatus.ConveyorSpeed}" Style="{StaticResource BigNum}" Foreground="#C084FC"/>
-                        <TextBlock Text=" m/s" FontSize="13" Foreground="#C084FC" VerticalAlignment="Bottom" Margin="2,0,0,4"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding DeviceStatus.ConveyorStatus}" Style="{StaticResource SubLabel}"/>
-                </StackPanel>
-            </Border>
             <!-- 컨베이어 제어 -->
-            <Border Grid.Column="4" Style="{StaticResource Card}">
+            <Border Grid.Column="3" Style="{StaticResource Card}">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="컨베이어 제어" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
                     <Grid Margin="0,0,0,3">
@@ -176,7 +165,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="5" Style="{StaticResource Card}">
+            <Border Grid.Column="4" Style="{StaticResource Card}">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="비상정지" Style="{StaticResource SecTitle}" HorizontalAlignment="Center"/>
                     <Button Command="{Binding ToggleEmergencyCommand}"

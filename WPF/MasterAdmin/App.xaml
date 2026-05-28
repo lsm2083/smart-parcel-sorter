@@ -12,6 +12,7 @@
         <local:BoolToVisibilityConverter     x:Key="BoolToVis"/>
         <local:BoolToEmergencyColorConverter x:Key="BoolToEmergencyColor"/>
         <local:BoolToEmergencyTextConverter  x:Key="BoolToEmergencyText"/>
+        <local:SlotFillConverter             x:Key="SlotFillConverter"/>
 
         <!-- ══════════════════════════════════════════
              다크 테마 색상 (기본값)

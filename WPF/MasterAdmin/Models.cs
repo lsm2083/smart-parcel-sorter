@@ -99,6 +99,52 @@ namespace MasterAdmin
         public bool Success { get; set; }
     }
 
+    // ── 아두이노 자동차 상태 ────────────────────────────────────────────
+    // Status: "출발전" (분류박스 미충족) / "출발중" (이동 중)
+    public class CarStatus : System.ComponentModel.INotifyPropertyChanged
+    {
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        private void OnProp([System.Runtime.CompilerServices.CallerMemberName] string? n = null)
+            => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(n));
+
+        [Newtonsoft.Json.JsonProperty("car_id")]
+        public string CarId { get; set; } = "";
+
+        [Newtonsoft.Json.JsonProperty("car_name")]
+        public string CarName { get; set; } = "";
+
+        private string _status = "출발전";
+        [Newtonsoft.Json.JsonProperty("status")]
+        public string Status
+        {
+            get => _status;
+            set { _status = value; OnProp(); OnProp(nameof(IsReady)); }
+        }
+
+        // 각 분류박스 채움 여부 (라파카가 채울 때마다 Flask가 업데이트)
+        private int _filledSlots = 0;
+        [Newtonsoft.Json.JsonProperty("filled_slots")]
+        public int FilledSlots
+        {
+            get => _filledSlots;
+            set { _filledSlots = value; OnProp(); }
+        }
+
+        private int _totalSlots = 0;
+        [Newtonsoft.Json.JsonProperty("total_slots")]
+        public int TotalSlots
+        {
+            get => _totalSlots;
+            set { _totalSlots = value; OnProp(); }
+        }
+
+        [Newtonsoft.Json.JsonProperty("last_updated")]
+        public DateTime LastUpdated { get; set; } = DateTime.Now;
+
+        // 분류박스 다 채워졌는지 (표시용)
+        public bool IsReady => Status == "출발중";
+    }
+
     public class DeviceStatus
     {
         public string ConveyorStatus { get; set; } = "연결전";

@@ -6,6 +6,25 @@ using System.Windows.Media;
 
 namespace MasterAdmin
 {
+    // FilledSlots, TotalSlots, ActualWidth(Grid) → 픽셀 너비 반환
+    public class SlotFillConverter : System.Windows.Data.IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (values.Length == 3
+                && values[0] is int filled
+                && values[1] is int total && total > 0
+                && values[2] is double width)
+            {
+                double ratio = Math.Clamp((double)filled / total, 0.0, 1.0);
+                return width * ratio;
+            }
+            return 0.0;
+        }
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, System.Globalization.CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     public class StatusToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -26,7 +45,7 @@ namespace MasterAdmin
                 "대기" or "출고대기" or "처리중" or "연결전" or "연결중" or "정지중" or "정지중..." or "재개중" or "재개중..." or "초기화중"
                     => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
 
-                "출고중" or "이동중" or "시작중..." or "HOME 이동중" or "집기중" or "분류중" or "정렬중" or "복귀중" or "작업중"
+                "출발중" or "출고중" or "이동중" or "시작중..." or "HOME 이동중" or "집기중" or "분류중" or "정렬중" or "복귀중" or "작업중"
                     => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
 
                 "박스걸림" or "경고"

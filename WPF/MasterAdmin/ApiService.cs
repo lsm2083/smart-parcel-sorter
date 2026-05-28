@@ -44,7 +44,8 @@ namespace MasterAdmin
                 LoadSortLogsAsync(vm),
                 LoadShippingLogsAsync(vm),
                 LoadBlackboxEventsAsync(vm),
-                LoadLoginRecordsAsync(vm)
+                LoadLoginRecordsAsync(vm),
+                LoadCarStatusAsync(vm)
             );
         }
 
@@ -214,6 +215,40 @@ namespace MasterAdmin
             catch (Exception ex)
             {
                 Log("LoadLoginRecords", ex);
+            }
+        }
+
+
+        // ── REST: 아두이노 자동차 상태 ────────────────────────────────────
+        public async Task LoadCarStatusAsync(MainViewModel vm)
+        {
+            try
+            {
+                var json = await _http.GetStringAsync("api/cars/status");
+                var cars = Deserialize<List<CarStatus>>(json) ?? new();
+
+                Dispatch(() =>
+                {
+                    foreach (var incoming in cars)
+                    {
+                        var existing = vm.Cars.FirstOrDefault(c => c.CarId == incoming.CarId);
+                        if (existing != null)
+                        {
+                            existing.Status = incoming.Status;
+                            existing.FilledSlots = incoming.FilledSlots;
+                            existing.TotalSlots = incoming.TotalSlots;
+                            existing.LastUpdated = incoming.LastUpdated;
+                        }
+                        else
+                        {
+                            vm.Cars.Add(incoming);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log("LoadCarStatus", ex);
             }
         }
 

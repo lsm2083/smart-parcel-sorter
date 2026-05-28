@@ -159,6 +159,7 @@ namespace MasterAdmin
         public ObservableCollection<ShippingLog> ShippingLogs { get; } = new();
         public ObservableCollection<BlackboxEvent> BlackboxEvents { get; } = new();
         public ObservableCollection<LoginRecord> LoginRecords { get; } = new();
+        public ObservableCollection<CarStatus> Cars { get; } = new();
 
         public ICommand NavigateToFieldCommand { get; }
         public ICommand NavigateToOverviewCommand { get; }
@@ -202,6 +203,26 @@ namespace MasterAdmin
 
         public MainViewModel()
         {
+            // ── 출고차량 기본값 (Flask 연결 전에도 카드 표시) ──────────────
+            Cars.Add(new CarStatus
+            {
+                CarId = "car_1",
+                CarName = "1호 차량",
+                Status = "출발전",
+                FilledSlots = 0,
+                TotalSlots = 4,
+                LastUpdated = DateTime.Now
+            });
+            Cars.Add(new CarStatus
+            {
+                CarId = "car_2",
+                CarName = "2호 차량",
+                Status = "출발전",
+                FilledSlots = 0,
+                TotalSlots = 4,
+                LastUpdated = DateTime.Now
+            });
+
             NavigateToFieldCommand = new RelayCommand(_ => CurrentPage = "현장");
             NavigateToOverviewCommand = new RelayCommand(_ => CurrentPage = "총괄");
 
@@ -283,6 +304,12 @@ namespace MasterAdmin
                 if (_tick % 3 == 0)
                 {
                     await _api.LoadSortLogsAsync(this);
+                }
+
+                // 2초마다 자동차 상태 새로고침
+                if (_tick % 2 == 0)
+                {
+                    await _api.LoadCarStatusAsync(this);
                 }
             };
 

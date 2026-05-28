@@ -1,16 +1,15 @@
-﻿using System.Windows;
+﻿using System.Net.Http;
+using System.Text;
+using System.Windows;
 using System.Windows.Input;
+using Newtonsoft.Json;
 
 namespace MasterAdmin
 {
     public partial class LoginWindow : Window
     {
-        // 계정 정보 — 나중에 Flask API 인증으로 교체 가능
-        private static readonly (string id, string pw, string name)[] _accounts =
-        {
-            ("admin",   "admin1234", "관리자"),
-            ("manager", "mgr1234",   "매니저"),
-        };
+        // ── Flask 서버 주소 (MainViewModel과 동일하게 맞추기) ──────────────
+        private const string SERVER = "http://192.168.0.21:5000";
 
         public LoginWindow()
         {
@@ -44,7 +43,7 @@ namespace MasterAdmin
             TryLogin();
         }
 
-        private void TryLogin()
+        private async void TryLogin()
         {
             string id = TxtId.Text.Trim();
             string pw = TxtPw.Password;
@@ -55,27 +54,85 @@ namespace MasterAdmin
                 return;
             }
 
-            foreach (var (accId, accPw, accName) in _accounts)
+            BtnLogin.IsEnabled = false;
+            ShowError("");
+
+            try
             {
-                if (id == accId && pw == accPw)
+                using var http = new HttpClient();
+                http.BaseAddress = new System.Uri(SERVER.TrimEnd('/') + "/");
+                http.Timeout = System.TimeSpan.FromSeconds(5);
+
+                // Flask POST /api/auth/login 호출
+                var body = new StringContent(
+                    JsonConvert.SerializeObject(new { user_id = id, password = pw }),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await http.PostAsync("api/auth/login", body);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    // 로그인 성공 → 메인 창 열기
-                    var main = new MainWindow();
-                    main.Show();
-                    Close();
-                    return;
+                    var json = await response.Content.ReadAsStringAsync();
+                    var result = JsonConvert.DeserializeObject<LoginResponse>(json);
+
+                    if (result?.Success == true)
+                    {
+                        // 로그인 성공 → 메인 창 열기
+                        var main = new MainWindow();
+                        main.Show();
+                        Close();
+                        return;
+                    }
+
+                    ShowError(result?.Message ?? "아이디 또는 비밀번호가 올바르지 않습니다.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    ShowError("아이디 또는 비밀번호가 올바르지 않습니다.");
+                }
+                else
+                {
+                    ShowError($"서버 오류 ({(int)response.StatusCode})");
                 }
             }
-
-            ShowError("아이디 또는 비밀번호가 올바르지 않습니다.");
-            TxtPw.Clear();
-            TxtPw.Focus();
+            catch (HttpRequestException)
+            {
+                ShowError("서버에 연결할 수 없습니다. 네트워크를 확인하세요.");
+            }
+            catch (System.Exception ex)
+            {
+                ShowError($"오류: {ex.Message}");
+            }
+            finally
+            {
+                BtnLogin.IsEnabled = true;
+                TxtPw.Clear();
+                TxtPw.Focus();
+            }
         }
 
         private void ShowError(string msg)
         {
             TxtError.Text = msg;
-            TxtError.Visibility = Visibility.Visible;
+            TxtError.Visibility = string.IsNullOrEmpty(msg) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        // Flask 응답 모델
+        private class LoginResponse
+        {
+            [JsonProperty("success")]
+            public bool Success { get; set; }
+
+            [JsonProperty("message")]
+            public string? Message { get; set; }
+
+            [JsonProperty("name")]
+            public string? Name { get; set; }
+
+            [JsonProperty("role")]
+            public string? Role { get; set; }
         }
     }
 }

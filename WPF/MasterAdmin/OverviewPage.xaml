@@ -6,487 +6,906 @@
              xmlns:local="clr-namespace:MasterAdmin"
              mc:Ignorable="d"
              Background="Transparent">
-  <UserControl.Resources>
-    <Style x:Key="Card" TargetType="Border">
-      <Setter Property="Background"   Value="{DynamicResource BgCard}"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="Padding"      Value="14"/>
-      <Setter Property="Margin"       Value="4"/>
-    </Style>
-    <Style x:Key="SecTitle" TargetType="TextBlock">
-      <Setter Property="FontSize"   Value="11"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="{DynamicResource FgSecondary}"/>
-      <Setter Property="Margin"     Value="0,0,0,8"/>
-    </Style>
-    <Style x:Key="BigNum" TargetType="TextBlock">
-      <Setter Property="FontSize"   Value="26"/>
-      <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="{DynamicResource FgPrimary}"/>
-    </Style>
-    <Style x:Key="SubLabel" TargetType="TextBlock">
-      <Setter Property="FontSize"   Value="11"/>
-      <Setter Property="Foreground" Value="{DynamicResource FgMuted}"/>
-      <Setter Property="Margin"     Value="0,2,0,0"/>
-    </Style>
-    <Style x:Key="DG" TargetType="DataGrid">
-      <Setter Property="Background"               Value="Transparent"/>
-      <Setter Property="Foreground"               Value="{DynamicResource FgData}"/>
-      <Setter Property="BorderThickness"          Value="0"/>
-      <Setter Property="RowBackground"            Value="Transparent"/>
-      <Setter Property="AlternatingRowBackground" Value="{DynamicResource BgAltRow}"/>
-      <Setter Property="GridLinesVisibility"      Value="Horizontal"/>
-      <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderLine}"/>
-      <Setter Property="ColumnHeaderHeight"       Value="30"/>
-      <Setter Property="RowHeight"                Value="26"/>
-      <Setter Property="FontSize"                 Value="11"/>
-      <Setter Property="SelectionMode"            Value="Single"/>
-      <Setter Property="AutoGenerateColumns"      Value="False"/>
-      <Setter Property="IsReadOnly"               Value="True"/>
-      <Setter Property="CanUserResizeRows"        Value="False"/>
-      <Setter Property="CanUserAddRows"           Value="False"/>
-      <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
-    </Style>
-    <Style x:Key="DGH" TargetType="DataGridColumnHeader">
-      <Setter Property="Background"      Value="{DynamicResource BgColHead}"/>
-      <Setter Property="Foreground"      Value="{DynamicResource FgMuted}"/>
-      <Setter Property="FontSize"        Value="10"/>
-      <Setter Property="FontWeight"      Value="SemiBold"/>
-      <Setter Property="Padding"         Value="8,5"/>
-      <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="BorderBrush"     Value="{DynamicResource BorderLine}"/>
-    </Style>
-    <Style x:Key="SmallBtn" TargetType="Button">
-      <Setter Property="Background"      Value="{DynamicResource SmBtnBg}"/>
-      <Setter Property="Foreground"      Value="{DynamicResource SmBtnFg}"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="FontSize"        Value="10"/>
-      <Setter Property="Padding"         Value="8,4"/>
-      <Setter Property="Cursor"          Value="Hand"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-  </UserControl.Resources>
+    <UserControl.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background"   Value="{DynamicResource BgCard}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding"      Value="14"/>
+            <Setter Property="Margin"       Value="4"/>
+        </Style>
+        <Style x:Key="SecTitle" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource FgSecondary}"/>
+            <Setter Property="Margin"     Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="BigNum" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="26"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource FgPrimary}"/>
+        </Style>
+        <Style x:Key="SubLabel" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource FgMuted}"/>
+            <Setter Property="Margin"     Value="0,2,0,0"/>
+        </Style>
+        <Style x:Key="DG" TargetType="DataGrid">
+            <Setter Property="Background"               Value="Transparent"/>
+            <Setter Property="Foreground"               Value="{DynamicResource FgData}"/>
+            <Setter Property="BorderThickness"          Value="0"/>
+            <Setter Property="RowBackground"            Value="Transparent"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource BgAltRow}"/>
+            <Setter Property="GridLinesVisibility"      Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderLine}"/>
+            <Setter Property="ColumnHeaderHeight"       Value="30"/>
+            <Setter Property="RowHeight"                Value="26"/>
+            <Setter Property="FontSize"                 Value="11"/>
+            <Setter Property="SelectionMode"            Value="Single"/>
+            <Setter Property="AutoGenerateColumns"      Value="False"/>
+            <Setter Property="IsReadOnly"               Value="True"/>
+            <Setter Property="CanUserResizeRows"        Value="False"/>
+            <Setter Property="CanUserAddRows"           Value="False"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+        <Style x:Key="DGH" TargetType="DataGridColumnHeader">
+            <Setter Property="Background"      Value="{DynamicResource BgColHead}"/>
+            <Setter Property="Foreground"      Value="{DynamicResource FgMuted}"/>
+            <Setter Property="FontSize"        Value="10"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Padding"         Value="8,5"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush"     Value="{DynamicResource BorderLine}"/>
+        </Style>
+        <Style x:Key="SmallBtn" TargetType="Button">
+            <Setter Property="Background"      Value="{DynamicResource SmBtnBg}"/>
+            <Setter Property="Foreground"      Value="{DynamicResource SmBtnFg}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize"        Value="10"/>
+            <Setter Property="Padding"         Value="8,4"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
 
-  <Grid Margin="4">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>  <!-- 요약 카드 -->
-      <RowDefinition Height="*"/>     <!-- 메인 콘텐츠 -->
-    </Grid.RowDefinitions>
-
-    <!-- ══ 요약 카드 ══ -->
-    <Grid Grid.Row="0">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="*"/>
-      </Grid.ColumnDefinitions>
-
-      <Border Grid.Column="0" Style="{StaticResource Card}">
-        <StackPanel>
-          <TextBlock Text="총 이벤트" Style="{StaticResource SecTitle}"/>
-          <TextBlock Text="{Binding BlackboxEvents.Count}" Style="{StaticResource BigNum}" Foreground="#FB923C"/>
-          <TextBlock Text="블랙박스 기록" Style="{StaticResource SubLabel}"/>
-        </StackPanel>
-      </Border>
-      <Border Grid.Column="1" Style="{StaticResource Card}">
-        <StackPanel>
-          <TextBlock Text="오류 건수" Style="{StaticResource SecTitle}"/>
-          <TextBlock Text="{Binding DeviceStatus.TodayErrorCount}" Style="{StaticResource BigNum}" Foreground="#F87171"/>
-          <TextBlock Text="오늘 발생" Style="{StaticResource SubLabel}"/>
-        </StackPanel>
-      </Border>
-      <Border Grid.Column="2" Style="{StaticResource Card}">
-        <StackPanel>
-          <TextBlock Text="로그인 기록" Style="{StaticResource SecTitle}"/>
-          <TextBlock Text="{Binding LoginRecords.Count}" Style="{StaticResource BigNum}" Foreground="#A78BFA"/>
-          <TextBlock Text="총 접속 이력" Style="{StaticResource SubLabel}"/>
-        </StackPanel>
-      </Border>
-      <Border Grid.Column="3" Style="{StaticResource Card}">
-        <StackPanel>
-          <TextBlock Text="시스템 가동률" Style="{StaticResource SecTitle}"/>
-          <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Binding DeviceStatus.SuccessRate}" Style="{StaticResource BigNum}" Foreground="#4ADE80"/>
-            <TextBlock Text=" %" FontSize="16" Foreground="#4ADE80" VerticalAlignment="Bottom" Margin="1,0,0,4"/>
-          </StackPanel>
-          <TextBlock Text="금일 기준" Style="{StaticResource SubLabel}"/>
-        </StackPanel>
-      </Border>
-    </Grid>
-
-    <!-- ══ 메인 콘텐츠 ══ -->
-    <Grid Grid.Row="1">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>     <!-- 왼쪽: 통계 그래프 -->
-        <ColumnDefinition Width="1.2*"/>  <!-- 중간: 블랙박스 -->
-        <ColumnDefinition Width="0.8*"/>  <!-- 오른쪽: 로그인 -->
-      </Grid.ColumnDefinitions>
-
-      <!-- ═ 통계 그래프 ═ -->
-      <Grid Grid.Column="0">
+    <Grid Margin="4">
         <Grid.RowDefinitions>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <!-- 요약 카드 -->
+            <RowDefinition Height="*"/>
+            <!-- 메인 콘텐츠 -->
         </Grid.RowDefinitions>
 
-        <!-- 권역별 분류 현황 막대 그래프 -->
-        <Border Grid.Row="0" Style="{StaticResource Card}">
-          <Grid>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-              <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
-              <TextBlock Text="권역별 분류 현황" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-            </StackPanel>
-
-            <!-- 막대 그래프 -->
-            <Grid Grid.Row="1">
-              <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-              </Grid.RowDefinitions>
-
-              <!-- Y축 + 막대들 -->
-              <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="28"/>   <!-- Y축 라벨 -->
-                  <ColumnDefinition Width="*"/>    <!-- 그래프 영역 -->
-                </Grid.ColumnDefinitions>
-
-                <!-- Y축 라벨 -->
-                <Grid Grid.Column="0">
-                  <Grid.RowDefinitions>
-                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
-                  </Grid.RowDefinitions>
-                  <TextBlock Grid.Row="0" Text="100" FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                  <TextBlock Grid.Row="1" Text="80"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                  <TextBlock Grid.Row="2" Text="60"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                  <TextBlock Grid.Row="3" Text="40"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                  <TextBlock Grid.Row="4" Text="20"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                </Grid>
-
-                <!-- 그래프 -->
-                <Grid Grid.Column="1">
-                  <!-- 수평 격자선 -->
-                  <Grid>
-                    <Grid.RowDefinitions>
-                      <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <Rectangle Grid.Row="0" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
-                    <Rectangle Grid.Row="1" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
-                    <Rectangle Grid.Row="2" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
-                    <Rectangle Grid.Row="3" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
-                    <Rectangle Grid.Row="4" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
-                  </Grid>
-
-                  <!-- 막대 그래프 (정상/불량 쌓기) -->
-                  <UniformGrid Rows="1" Margin="4,0">
-                    <!-- 서울 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="72" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="72" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="8" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 경기 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="85" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="85" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="12" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 인천 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="48" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="48" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="5" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 부산 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="63" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="63" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="9" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 대구 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="38" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="38" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="4" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 광주 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="29" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="29" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="3" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                    <!-- 대전 -->
-                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                      <Border Height="44" Background="#38BDF8" CornerRadius="3,3,0,0">
-                        <TextBlock Text="44" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                      </Border>
-                      <Border Height="6" Background="#F87171" CornerRadius="0"/>
-                    </StackPanel>
-                  </UniformGrid>
-                </Grid>
-              </Grid>
-
-              <!-- X축 라벨 -->
-              <UniformGrid Grid.Row="1" Rows="1" Margin="32,3,4,0">
-                <TextBlock Text="서울" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="경기" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="인천" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="부산" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="대구" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="광주" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                <TextBlock Text="대전" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-              </UniformGrid>
-            </Grid>
-
-            <!-- 범례 -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
-              <Rectangle Width="10" Height="10" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-              <TextBlock Text="정상" FontSize="9" Foreground="{DynamicResource FgMuted}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-              <Rectangle Width="10" Height="10" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-              <TextBlock Text="불량" FontSize="9" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <!-- 인식 방식 / 오류 유형 도넛 차트 -->
-        <Border Grid.Row="1" Style="{StaticResource Card}">
-          <Grid>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-              <TextBlock Text="▌ " Foreground="#C084FC" FontSize="14"/>
-              <TextBlock Text="분류 통계" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-            </StackPanel>
-
-            <Grid Grid.Row="1">
-              <Grid.ColumnDefinitions>
+        <!-- ══ 요약 카드 ══ -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
-              </Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-              <!-- 인식 방식 비율 -->
-              <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="인식 방식" FontSize="10" Foreground="{DynamicResource FgMuted}"
-                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                <!-- 원형 시각화 (WPF Path) -->
-                <Grid Width="80" Height="80">
-                  <Ellipse Width="80" Height="80" Fill="#38BDF8"/>
-                  <Path Fill="#4ADE80" Data="M 40,40 L 40,0 A 40,40 0 0 1 80,40 Z"/>
-                  <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
-                  <TextBlock Text="QR" FontSize="9" Foreground="#38BDF8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
-                  <TextBlock Text="62%" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
-                </Grid>
-                <StackPanel Margin="0,8,0,0">
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                    <Rectangle Width="8" Height="8" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                    <TextBlock Text="QR  62%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                    <Rectangle Width="8" Height="8" Fill="#4ADE80" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                    <TextBlock Text="OCR 38%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                  </StackPanel>
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="총 이벤트" Style="{StaticResource SecTitle}"/>
+                    <TextBlock Text="{Binding BlackboxEvents.Count}" Style="{StaticResource BigNum}" Foreground="#FB923C"/>
+                    <TextBlock Text="블랙박스 기록" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
-              </StackPanel>
-
-              <!-- 오류 유형 비율 -->
-              <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="오류 유형" FontSize="10" Foreground="{DynamicResource FgMuted}"
-                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                <Grid Width="80" Height="80">
-                  <Ellipse Width="80" Height="80" Fill="#F87171"/>
-                  <Path Fill="#FB923C" Data="M 40,40 L 40,0 A 40,40 0 0 1 72,60 Z"/>
-                  <Path Fill="#FBBF24" Data="M 40,40 L 72,60 A 40,40 0 0 1 10,65 Z"/>
-                  <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
-                  <TextBlock Text="오류" FontSize="9" Foreground="#F87171" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
-                  <TextBlock Text="분석" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
-                </Grid>
-                <StackPanel Margin="0,8,0,0">
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                    <Rectangle Width="8" Height="8" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                    <TextBlock Text="인식실패 45%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                    <Rectangle Width="8" Height="8" Fill="#FB923C" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                    <TextBlock Text="권역오류 32%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                    <Rectangle Width="8" Height="8" Fill="#FBBF24" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                    <TextBlock Text="타이밍   23%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                  </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="오류 건수" Style="{StaticResource SecTitle}"/>
+                    <TextBlock Text="{Binding DeviceStatus.TodayErrorCount}" Style="{StaticResource BigNum}" Foreground="#F87171"/>
+                    <TextBlock Text="오늘 발생" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
-              </StackPanel>
-            </Grid>
-          </Grid>
-        </Border>
-      </Grid>
-
-      <!-- ═ 블랙박스 이벤트 ═ -->
-      <Border Grid.Column="1" Style="{StaticResource Card}">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-
-          <Grid Grid.Row="0" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="▌ " Foreground="#FB923C" FontSize="14"/>
-              <TextBlock Text="블랙박스 이벤트" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-            </StackPanel>
-            <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                    Command="{Binding ClearLogsCommand}" CommandParameter="blackbox"
-                    HorizontalAlignment="Right"/>
-          </Grid>
-
-          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Text="필터: " FontSize="10" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
-            <Border Background="{DynamicResource AccentBg}" CornerRadius="10" Padding="8,3" Margin="4,0">
-              <TextBlock Text="전체" FontSize="10" Foreground="{DynamicResource FgSecondary}"/>
             </Border>
-            <Border Background="#7C2D12" CornerRadius="10" Padding="8,3" Margin="4,0">
-              <TextBlock Text="OCR실패" FontSize="10" Foreground="#FB923C"/>
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="로그인 기록" Style="{StaticResource SecTitle}"/>
+                    <TextBlock Text="{Binding LoginRecords.Count}" Style="{StaticResource BigNum}" Foreground="#A78BFA"/>
+                    <TextBlock Text="총 접속 이력" Style="{StaticResource SubLabel}"/>
+                </StackPanel>
             </Border>
-            <Border Background="#7F1D1D" CornerRadius="10" Padding="8,3" Margin="4,0">
-              <TextBlock Text="분류실패" FontSize="10" Foreground="#F87171"/>
+            <Border Grid.Column="3" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="시스템 가동률" Style="{StaticResource SecTitle}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding DeviceStatus.SuccessRate}" Style="{StaticResource BigNum}" Foreground="#4ADE80"/>
+                        <TextBlock Text=" %" FontSize="16" Foreground="#4ADE80" VerticalAlignment="Bottom" Margin="1,0,0,4"/>
+                    </StackPanel>
+                    <TextBlock Text="금일 기준" Style="{StaticResource SubLabel}"/>
+                </StackPanel>
             </Border>
-            <Border Background="#1C3D5A" CornerRadius="10" Padding="8,3" Margin="4,0">
-              <TextBlock Text="박스걸림" FontSize="10" Foreground="#38BDF8"/>
-            </Border>
-          </StackPanel>
-
-          <DataGrid Grid.Row="2" ItemsSource="{Binding BlackboxEvents}" Style="{StaticResource DG}">
-            <DataGrid.ColumnHeaderStyle>
-              <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.RowStyle>
-              <Style TargetType="DataGridRow">
-                <Setter Property="Background" Value="Transparent"/>
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding Severity}" Value="오류">
-                    <Setter Property="Background" Value="#1A0000"/>
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </DataGrid.RowStyle>
-            <DataGrid.Columns>
-              <DataGridTextColumn Header="시각"     Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm:ss}" Width="92"/>
-              <DataGridTemplateColumn Header="유형" Width="68">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
-                            Background="{Binding EventType, Converter={StaticResource StatusToColor}}">
-                      <TextBlock Text="{Binding EventType}" FontSize="10" Foreground="White"/>
-                    </Border>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="심각도" Width="48">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding Severity}" FontSize="10" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{Binding Severity, Converter={StaticResource SeverityToColor}}"/>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTextColumn Header="설명"   Binding="{Binding Description}"    Width="*"/>
-              <DataGridTemplateColumn Header="이미지" Width="68">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Border Background="#0F2840" CornerRadius="3" Padding="4,2"
-                            HorizontalAlignment="Center" Cursor="Hand">
-                      <TextBlock Text="🖼 보기" FontSize="10" Foreground="#38BDF8"
-                                 ToolTip="{Binding ImagePath}"/>
-                    </Border>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
-          </DataGrid>
         </Grid>
-      </Border>
 
-      <!-- ═ 로그인 기록 ═ -->
-      <Border Grid.Column="2" Style="{StaticResource Card}">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-          <Grid Grid.Row="0" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="▌ " Foreground="#A78BFA" FontSize="14"/>
-              <TextBlock Text="로그인 기록" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-            </StackPanel>
-            <Button Style="{StaticResource SmallBtn}" Content="초기화"
+
+
+        <!-- ══ 메인 콘텐츠 ══ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <!-- 왼쪽: 출고차량 상태 -->
+                <ColumnDefinition Width="1.1*"/>
+                <!-- 중간: 블랙박스+통계 -->
+                <ColumnDefinition Width="0.75*"/>
+                <!-- 오른쪽: 로그인 -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ═ 출고차량 상태 ═ -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 헤더 -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
+                        <TextBlock Text="출고차량 상태" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{DynamicResource FgPrimary}"/>
+                        <TextBlock Text=" — 실시간 (2초 간격)" FontSize="10"
+                       Foreground="{DynamicResource FgMuted}" VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+                    </StackPanel>
+
+                    <!-- 차량 카드 목록 -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Cars}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <!-- ══ 데이터 없을 때 표시할 더미 카드 2개 ══ -->
+                            <ItemsControl.Items>
+                            </ItemsControl.Items>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="12" Margin="0,0,0,12" ClipToBounds="True">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background"      Value="{DynamicResource BgCard}"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                                <Setter Property="BorderBrush"     Value="#334155"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="출발중">
+                                                        <Setter Property="BorderBrush" Value="#3B82F6"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="출발전">
+                                                        <Setter Property="BorderBrush" Value="#EAB308"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <!-- 상태 배너 -->
+                                            <Grid Height="36">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Background" Value="#1A2535"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="출발전">
+                                                                <Setter Property="Background" Value="#292210"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="출발중">
+                                                                <Setter Property="Background" Value="#0D1F3C"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                                                    <TextBlock Text="🚛 " FontSize="14" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding CarName}" FontSize="12" FontWeight="Bold"
+                                     Foreground="{DynamicResource FgPrimary}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                    VerticalAlignment="Center" Margin="0,0,12,0">
+                                                    <TextBlock VerticalAlignment="Center" FontSize="13" Margin="0,0,5,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="⏸"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Status}" Value="출발중">
+                                                                        <Setter Property="Text" Value="🚀"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <Border CornerRadius="6" Padding="10,3"
+                                  Background="{Binding Status, Converter={StaticResource StatusToColor}}">
+                                                        <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- 차량 이미지 씬 -->
+                                            <Grid Height="130" Background="#0F172A">
+                                                <Viewbox Stretch="Uniform">
+                                                    <Canvas Width="320" Height="130">
+                                                        <!-- 하늘 -->
+                                                        <Rectangle Canvas.Left="0" Canvas.Top="0" Width="320" Height="90">
+                                                            <Rectangle.Fill>
+                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                    <GradientStop Color="#0F172A" Offset="0"/>
+                                                                    <GradientStop Color="#1E3A5F" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 도로 -->
+                                                        <Rectangle Canvas.Left="0" Canvas.Top="90" Width="320" Height="40">
+                                                            <Rectangle.Fill>
+                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                    <GradientStop Color="#1E293B" Offset="0"/>
+                                                                    <GradientStop Color="#0F172A" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="0"   Canvas.Top="90" Width="320" Height="2">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#334155"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 도로 중앙선 -->
+                                                        <Rectangle Canvas.Left="10"  Canvas.Top="108" Width="40" Height="3" RadiusX="1" RadiusY="1">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#EAB308" Opacity="0.7"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="70"  Canvas.Top="108" Width="40" Height="3" RadiusX="1" RadiusY="1">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#EAB308" Opacity="0.7"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="130" Canvas.Top="108" Width="40" Height="3" RadiusX="1" RadiusY="1">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#EAB308" Opacity="0.7"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="190" Canvas.Top="108" Width="40" Height="3" RadiusX="1" RadiusY="1">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#EAB308" Opacity="0.7"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="250" Canvas.Top="108" Width="40" Height="3" RadiusX="1" RadiusY="1">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#EAB308" Opacity="0.7"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 그림자 -->
+                                                        <Ellipse Canvas.Left="60" Canvas.Top="116" Width="190" Height="10" Opacity="0.35">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#000000"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <!-- 차체 -->
+                                                        <Rectangle Canvas.Left="40" Canvas.Top="62" Width="230" Height="38" RadiusX="6" RadiusY="6">
+                                                            <Rectangle.Fill>
+                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                    <GradientStop Color="#1D4ED8" Offset="0"/>
+                                                                    <GradientStop Color="#1E40AF" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="40" Canvas.Top="62" Width="230" Height="8" RadiusX="6" RadiusY="0" Opacity="0.25">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#FFFFFF"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 캐빈 -->
+                                                        <Path Data="M 80,62 L 96,30 L 210,30 L 240,62 Z">
+                                                            <Path.Fill>
+                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                    <GradientStop Color="#2563EB" Offset="0"/>
+                                                                    <GradientStop Color="#1D4ED8" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Path.Fill>
+                                                        </Path>
+                                                        <!-- 앞유리 -->
+                                                        <Path Data="M 205,32 L 234,60 L 195,60 Z" Opacity="0.75">
+                                                            <Path.Fill>
+                                                                <SolidColorBrush Color="#BAE6FD"/>
+                                                            </Path.Fill>
+                                                        </Path>
+                                                        <Path Data="M 210,34 L 228,54 L 215,54 Z" Opacity="0.3">
+                                                            <Path.Fill>
+                                                                <SolidColorBrush Color="#FFFFFF"/>
+                                                            </Path.Fill>
+                                                        </Path>
+                                                        <!-- 뒷유리 -->
+                                                        <Path Data="M 100,33 L 118,60 L 86,60 Z" Opacity="0.75">
+                                                            <Path.Fill>
+                                                                <SolidColorBrush Color="#BAE6FD"/>
+                                                            </Path.Fill>
+                                                        </Path>
+                                                        <!-- 사이드 창문 -->
+                                                        <Rectangle Canvas.Left="124" Canvas.Top="33" Width="68" Height="25" RadiusX="3" RadiusY="3" Opacity="0.7">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#93C5FD"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="125" Canvas.Top="34" Width="30" Height="12" RadiusX="2" RadiusY="2" Opacity="0.35">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#FFFFFF"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 분류박스 A -->
+                                                        <Rectangle Canvas.Left="42" Canvas.Top="34" Width="30" Height="28" RadiusX="3" RadiusY="3">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0C4A6E"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="44" Canvas.Top="36" Width="26" Height="24" RadiusX="2" RadiusY="2">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#075985"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="57" Canvas.Top="36" Width="1.5" Height="24" Opacity="0.5">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0EA5E9"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="44" Canvas.Top="48" Width="26" Height="1.5" Opacity="0.5">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0EA5E9"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 분류박스 B -->
+                                                        <Rectangle Canvas.Left="76" Canvas.Top="34" Width="30" Height="28" RadiusX="3" RadiusY="3">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0C4A6E"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="78" Canvas.Top="36" Width="26" Height="24" RadiusX="2" RadiusY="2">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0369A1"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="91" Canvas.Top="36" Width="1.5" Height="24" Opacity="0.5">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0EA5E9"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <Rectangle Canvas.Left="78" Canvas.Top="48" Width="26" Height="1.5" Opacity="0.5">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#0EA5E9"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 헤드라이트 글로우 -->
+                                                        <Ellipse Canvas.Left="254" Canvas.Top="56" Width="34" Height="22" Opacity="0.28">
+                                                            <Ellipse.Fill>
+                                                                <RadialGradientBrush>
+                                                                    <GradientStop Color="#FDE68A" Offset="0"/>
+                                                                    <GradientStop Color="Transparent" Offset="1"/>
+                                                                </RadialGradientBrush>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Rectangle Canvas.Left="264" Canvas.Top="63" Width="9" Height="13" RadiusX="2" RadiusY="2">
+                                                            <Rectangle.Fill>
+                                                                <SolidColorBrush Color="#FDE68A"/>
+                                                            </Rectangle.Fill>
+                                                        </Rectangle>
+                                                        <!-- 앞바퀴 -->
+                                                        <Ellipse Canvas.Left="192" Canvas.Top="82" Width="44" Height="44">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#0F172A"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="196" Canvas.Top="86" Width="36" Height="36">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#1E293B"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="204" Canvas.Top="94" Width="20" Height="20">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#334155"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="210" Canvas.Top="100" Width="8" Height="8">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#64748B"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Line X1="214" Y1="88" X2="214" Y2="118" Stroke="#475569" StrokeThickness="1.5"/>
+                                                        <Line X1="200" Y1="104" X2="228" Y2="104" Stroke="#475569" StrokeThickness="1.5"/>
+                                                        <Line X1="203" Y1="93" X2="225" Y2="115" Stroke="#475569" StrokeThickness="1.2"/>
+                                                        <Line X1="225" Y1="93" X2="203" Y2="115" Stroke="#475569" StrokeThickness="1.2"/>
+                                                        <!-- 뒷바퀴 -->
+                                                        <Ellipse Canvas.Left="64"  Canvas.Top="82" Width="44" Height="44">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#0F172A"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="68"  Canvas.Top="86" Width="36" Height="36">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#1E293B"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="76"  Canvas.Top="94" Width="20" Height="20">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#334155"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Ellipse Canvas.Left="82"  Canvas.Top="100" Width="8" Height="8">
+                                                            <Ellipse.Fill>
+                                                                <SolidColorBrush Color="#64748B"/>
+                                                            </Ellipse.Fill>
+                                                        </Ellipse>
+                                                        <Line X1="86"  Y1="88"  X2="86"  Y2="118" Stroke="#475569" StrokeThickness="1.5"/>
+                                                        <Line X1="72"  Y1="104" X2="100" Y2="104" Stroke="#475569" StrokeThickness="1.5"/>
+                                                        <Line X1="75"  Y1="93"  X2="97"  Y2="115" Stroke="#475569" StrokeThickness="1.2"/>
+                                                        <Line X1="97"  Y1="93"  X2="75"  Y2="115" Stroke="#475569" StrokeThickness="1.2"/>
+                                                    </Canvas>
+                                                </Viewbox>
+
+                                                <!-- 출발전 오버레이 -->
+                                                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                                CornerRadius="22" Width="44" Height="44" Background="#CC0F172A">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="출발전">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="⏸" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- 출발중 뱃지 -->
+                                                <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                CornerRadius="6" Padding="7,3" Margin="0,6,6,0" Background="#CC1D4ED8">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="출발중">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="🚀 " FontSize="9"/>
+                                                        <TextBlock Text="이동중" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- 적재 정보 -->
+                                            <StackPanel Margin="14,10,14,12">
+                                                <Grid Margin="0,0,0,5">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="분류박스 적재" FontSize="10"
+                                     Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding FilledSlots}" FontSize="13" FontWeight="Bold" Foreground="#4ADE80"/>
+                                                        <TextBlock Text=" / " FontSize="12" Foreground="{DynamicResource FgMuted}"/>
+                                                        <TextBlock Text="{Binding TotalSlots}" FontSize="12" Foreground="{DynamicResource FgMuted}"/>
+                                                        <TextBlock Text=" 칸" FontSize="10" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Bottom" Margin="1,0,0,1"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Height="7" Margin="0,0,0,5">
+                                                    <Rectangle RadiusX="4" RadiusY="4" Fill="{DynamicResource BgAltRow}"/>
+                                                    <Rectangle RadiusX="4" RadiusY="4" HorizontalAlignment="Left">
+                                                        <Rectangle.Width>
+                                                            <MultiBinding Converter="{StaticResource SlotFillConverter}">
+                                                                <Binding Path="FilledSlots"/>
+                                                                <Binding Path="TotalSlots"/>
+                                                                <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}"/>
+                                                            </MultiBinding>
+                                                        </Rectangle.Width>
+                                                        <Rectangle.Fill>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                <GradientStop Color="#3B82F6" Offset="0"/>
+                                                                <GradientStop Color="#06B6D4" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Rectangle.Fill>
+                                                    </Rectangle>
+                                                </Grid>
+                                                <TextBlock Text="{Binding LastUpdated, StringFormat=🕐 HH:mm:ss 업데이트}"
+                                   FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- ═ 블랙박스 + 통계 (Col1) ═ -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1.2*"/>
+                    <!-- 블랙박스 -->
+                    <RowDefinition Height="*"/>
+                    <!-- 통계 그래프 -->
+                </Grid.RowDefinitions>
+
+                <!-- ═ 블랙박스 이벤트 ═ -->
+                <Border Grid.Row="0" Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="▌ " Foreground="#FB923C" FontSize="14"/>
+                                <TextBlock Text="블랙박스 이벤트" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                            </StackPanel>
+                            <Button Style="{StaticResource SmallBtn}" Content="초기화"
+                        Command="{Binding ClearLogsCommand}" CommandParameter="blackbox"
+                        HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="필터: " FontSize="10" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
+                            <Border Background="{DynamicResource AccentBg}" CornerRadius="10" Padding="8,3" Margin="4,0">
+                                <TextBlock Text="전체" FontSize="10" Foreground="{DynamicResource FgSecondary}"/>
+                            </Border>
+                            <Border Background="#7C2D12" CornerRadius="10" Padding="8,3" Margin="4,0">
+                                <TextBlock Text="OCR실패" FontSize="10" Foreground="#FB923C"/>
+                            </Border>
+                            <Border Background="#7F1D1D" CornerRadius="10" Padding="8,3" Margin="4,0">
+                                <TextBlock Text="분류실패" FontSize="10" Foreground="#F87171"/>
+                            </Border>
+                            <Border Background="#1C3D5A" CornerRadius="10" Padding="8,3" Margin="4,0">
+                                <TextBlock Text="박스걸림" FontSize="10" Foreground="#38BDF8"/>
+                            </Border>
+                        </StackPanel>
+
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding BlackboxEvents}" Style="{StaticResource DG}">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Severity}" Value="오류">
+                                            <Setter Property="Background" Value="#1A0000"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="시각"     Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm:ss}" Width="92"/>
+                                <DataGridTemplateColumn Header="유형" Width="68">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
+                                Background="{Binding EventType, Converter={StaticResource StatusToColor}}">
+                                                <TextBlock Text="{Binding EventType}" FontSize="10" Foreground="White"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="심각도" Width="48">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Severity}" FontSize="10" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="{Binding Severity, Converter={StaticResource SeverityToColor}}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="설명"   Binding="{Binding Description}"    Width="*"/>
+                                <DataGridTemplateColumn Header="이미지" Width="68">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#0F2840" CornerRadius="3" Padding="4,2"
+                                HorizontalAlignment="Center" Cursor="Hand">
+                                                <TextBlock Text="🖼 보기" FontSize="10" Foreground="#38BDF8"
+                                     ToolTip="{Binding ImagePath}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <!-- ═ 통계 그래프 ═ -->
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 권역별 분류 현황 막대 그래프 -->
+                    <Border Grid.Row="0" Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
+                                <TextBlock Text="권역별 분류 현황" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                            </StackPanel>
+
+                            <!-- 막대 그래프 -->
+                            <Grid Grid.Row="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Y축 + 막대들 -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <!-- Y축 라벨 -->
+                                        <ColumnDefinition Width="*"/>
+                                        <!-- 그래프 영역 -->
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Y축 라벨 -->
+                                    <Grid Grid.Column="0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                            <RowDefinition/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="100" FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                        <TextBlock Grid.Row="1" Text="80"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                        <TextBlock Grid.Row="2" Text="60"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                        <TextBlock Grid.Row="3" Text="40"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                        <TextBlock Grid.Row="4" Text="20"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                    </Grid>
+
+                                    <!-- 그래프 -->
+                                    <Grid Grid.Column="1">
+                                        <!-- 수평 격자선 -->
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                            </Grid.RowDefinitions>
+                                            <Rectangle Grid.Row="0" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
+                                            <Rectangle Grid.Row="1" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
+                                            <Rectangle Grid.Row="2" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
+                                            <Rectangle Grid.Row="3" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
+                                            <Rectangle Grid.Row="4" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
+                                        </Grid>
+
+                                        <!-- 막대 그래프 (정상/불량 쌓기) -->
+                                        <UniformGrid Rows="1" Margin="4,0">
+                                            <!-- 서울 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="72" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="72" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="8" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 경기 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="85" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="85" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="12" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 인천 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="48" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="48" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="5" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 부산 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="63" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="63" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="9" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 대구 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="38" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="38" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="4" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 광주 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="29" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="29" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="3" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                            <!-- 대전 -->
+                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                <Border Height="44" Background="#38BDF8" CornerRadius="3,3,0,0">
+                                                    <TextBlock Text="44" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                </Border>
+                                                <Border Height="6" Background="#F87171" CornerRadius="0"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+                                    </Grid>
+                                </Grid>
+
+                                <!-- X축 라벨 -->
+                                <UniformGrid Grid.Row="1" Rows="1" Margin="32,3,4,0">
+                                    <TextBlock Text="서울" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="경기" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="인천" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="부산" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="대구" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="광주" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="대전" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                </UniformGrid>
+                            </Grid>
+
+                            <!-- 범례 -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                                <Rectangle Width="10" Height="10" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                <TextBlock Text="정상" FontSize="9" Foreground="{DynamicResource FgMuted}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <Rectangle Width="10" Height="10" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                <TextBlock Text="불량" FontSize="9" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 인식 방식 / 오류 유형 도넛 차트 -->
+                    <Border Grid.Row="1" Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="▌ " Foreground="#C084FC" FontSize="14"/>
+                                <TextBlock Text="분류 통계" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                            </StackPanel>
+
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 인식 방식 비율 -->
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="인식 방식" FontSize="10" Foreground="{DynamicResource FgMuted}"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <!-- 원형 시각화 (WPF Path) -->
+                                    <Grid Width="80" Height="80">
+                                        <Ellipse Width="80" Height="80" Fill="#38BDF8"/>
+                                        <Path Fill="#4ADE80" Data="M 40,40 L 40,0 A 40,40 0 0 1 80,40 Z"/>
+                                        <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
+                                        <TextBlock Text="QR" FontSize="9" Foreground="#38BDF8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
+                                        <TextBlock Text="62%" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                    </Grid>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                            <Rectangle Width="8" Height="8" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                            <TextBlock Text="QR  62%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                            <Rectangle Width="8" Height="8" Fill="#4ADE80" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                            <TextBlock Text="OCR 38%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- 오류 유형 비율 -->
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="오류 유형" FontSize="10" Foreground="{DynamicResource FgMuted}"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Grid Width="80" Height="80">
+                                        <Ellipse Width="80" Height="80" Fill="#F87171"/>
+                                        <Path Fill="#FB923C" Data="M 40,40 L 40,0 A 40,40 0 0 1 72,60 Z"/>
+                                        <Path Fill="#FBBF24" Data="M 40,40 L 72,60 A 40,40 0 0 1 10,65 Z"/>
+                                        <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
+                                        <TextBlock Text="오류" FontSize="9" Foreground="#F87171" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
+                                        <TextBlock Text="분석" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                    </Grid>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                            <Rectangle Width="8" Height="8" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                            <TextBlock Text="인식실패 45%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                            <Rectangle Width="8" Height="8" Fill="#FB923C" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                            <TextBlock Text="권역오류 32%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                            <Rectangle Width="8" Height="8" Fill="#FBBF24" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                            <TextBlock Text="타이밍   23%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+
+            <!-- ═ 로그인 기록 ═ -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="▌ " Foreground="#A78BFA" FontSize="14"/>
+                            <TextBlock Text="로그인 기록" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource SmallBtn}" Content="초기화"
                     Command="{Binding ClearLogsCommand}" CommandParameter="login"
                     HorizontalAlignment="Right"/>
-          </Grid>
-          <DataGrid Grid.Row="1" ItemsSource="{Binding LoginRecords}" Style="{StaticResource DG}">
-            <DataGrid.ColumnHeaderStyle>
-              <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.Columns>
-              <DataGridTextColumn Header="시각"   Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm}" Width="75"/>
-              <DataGridTextColumn Header="사용자" Binding="{Binding UserName}"                            Width="48"/>
-              <DataGridTextColumn Header="권한"   Binding="{Binding Role}"                                Width="65"/>
-              <DataGridTemplateColumn Header="구분" Width="50">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
+                    </Grid>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding LoginRecords}" Style="{StaticResource DG}">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="시각"   Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm}" Width="75"/>
+                            <DataGridTextColumn Header="사용자" Binding="{Binding UserName}"                            Width="48"/>
+                            <DataGridTextColumn Header="권한"   Binding="{Binding Role}"                                Width="65"/>
+                            <DataGridTemplateColumn Header="구분" Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
                             Background="{Binding Action, Converter={StaticResource StatusToColor}}">
-                      <TextBlock Text="{Binding Action}" FontSize="10" Foreground="White"/>
-                    </Border>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="*"/>
-              <DataGridTemplateColumn Header="결과" Width="36">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13">
-                      <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                          <Setter Property="Text"       Value="✓"/>
-                          <Setter Property="Foreground" Value="#4ADE80"/>
-                          <Style.Triggers>
-                            <DataTrigger Binding="{Binding Success}" Value="False">
-                              <Setter Property="Text"       Value="✗"/>
-                              <Setter Property="Foreground" Value="#F87171"/>
-                            </DataTrigger>
-                          </Style.Triggers>
-                        </Style>
-                      </TextBlock.Style>
-                    </TextBlock>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
-          </DataGrid>
+                                            <TextBlock Text="{Binding Action}" FontSize="10" Foreground="White"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="*"/>
+                            <DataGridTemplateColumn Header="결과" Width="36">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text"       Value="✓"/>
+                                                    <Setter Property="Foreground" Value="#4ADE80"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Success}" Value="False">
+                                                            <Setter Property="Text"       Value="✗"/>
+                                                            <Setter Property="Foreground" Value="#F87171"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
         </Grid>
-      </Border>
     </Grid>
-  </Grid>
 </UserControl>
