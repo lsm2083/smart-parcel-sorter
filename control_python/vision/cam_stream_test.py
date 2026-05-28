@@ -582,8 +582,8 @@ def run_recognition(frame, package_id):
 
     # --- 1단계: QR 시도 ---
     print("[RECOGNITION] QR 인식 시도...")
-    # qr_data = try_qr(frame) # <- 주석처리
-    qr_data = None  # ← 강제 실패
+    qr_data = try_qr(frame) # <- 주석처리
+    # qr_data = None  # ← 강제 실패
 
     if qr_data:
         sort_code = f"{qr_data['region']}_{qr_data['package_type']}"

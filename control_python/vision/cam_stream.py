@@ -152,8 +152,8 @@ def detect_box_by_green(frame):
 def find_text_area(frame):
     h, w = frame.shape[:2]
 
-    mx1, my1 = int(w * 0.15), int(h * 0.15)
-    mx2, my2 = int(w * 0.85), int(h * 0.85)
+    mx1, my1 = int(w * 0.25), int(h * 0.20)
+    mx2, my2 = int(w * 0.75), int(h * 0.80)
 
     roi = frame[my1:my2, mx1:mx2].copy()
     rh, rw = roi.shape[:2]
@@ -534,25 +534,29 @@ def scan_worker(package_id):
     global scan_running, show_ocr_area, ocr_box
 
     scan_running = True
+
+    # 박스 안정화 시간
+    time.sleep(1.0)
+
     show_ocr_area = False
     ocr_box = None
 
-    print("[VISION] 박스 감지 대기:", package_id)
+    # print("[VISION] 박스 감지 대기:", package_id)
 
-    while True:
-        with frame_lock:
-            if latest_frame is None:
-                time.sleep(0.05)
-                continue
-            frame = latest_frame.copy()
+    # while True:
+    #     with frame_lock:
+    #         if latest_frame is None:
+    #             time.sleep(0.05)
+    #             continue
+    #         frame = latest_frame.copy()
 
-        detected, green_ratio = detect_box_by_green(frame)
+    #     detected, green_ratio = detect_box_by_green(frame)
 
-        if detected:
-            print(f"[VISION] 박스 감지 완료 green={green_ratio:.2f}")
-            break
+    #     if detected:
+    #         print(f"[VISION] 박스 감지 완료 green={green_ratio:.2f}")
+    #         break
 
-        time.sleep(0.05)
+    #     time.sleep(0.05)
 
     show_ocr_area = True
 
@@ -572,7 +576,21 @@ def scan_worker(package_id):
         # QR 먼저 시도
         # =========================
         if not qr_sent:
-            qr_text, bbox = detect_qr(frame)
+            qr_text = None
+
+            for i in range(3):
+                qr_text, bbox = detect_qr(frame)
+
+                if qr_text:
+                    print(f"[QR] {i + 1}번째 시도 성공:", qr_text)
+                    break
+
+                print(f"[QR] {i + 1}번째 시도 실패")
+                time.sleep(0.2)
+
+                with frame_lock:
+                    if latest_frame is not None:
+                        frame = latest_frame.copy()
 
             if qr_text:
                 print("[QR] 인식 성공:", qr_text)
@@ -618,12 +636,15 @@ def scan_worker(package_id):
                     qr_sent = True
 
             else:
-                print("[QR] 탐색 중...")
+                print("[QR] 3번 시도 실패 → OCR로 넘어감")
 
         # =========================
         # QR 실패 상태에서 OCR 시도
         # =========================
-        if not ocr_sent and time.time() - last_ocr_time >= 1.0:
+        if not ocr_sent and time.time() - last_ocr_time >= 2.0:
+
+        # ocr 테스트용
+        #if time.time() - last_ocr_time >= 1.0:
             last_ocr_time = time.time()
 
             if ocr_box is None:
@@ -695,8 +716,8 @@ def camera_loop():
         print("[CAMERA] 카메라 열기 실패")
         return
 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
     print("[CAMERA] 카메라 시작")
 
@@ -749,7 +770,15 @@ def camera_loop():
             )
 
         # QR 박스 표시
-        qr_text, bbox = detect_qr(frame)
+        h, w = frame.shape[:2]
+
+        # QR이 보통 화면 오른쪽 라벨 쪽에 있으니까 오른쪽 중앙만 자름
+        qr_roi = frame[int(h*0.15):int(h*0.75), int(w*0.35):int(w*0.90)].copy()
+
+        # QR 확대
+        qr_big = cv2.resize(qr_roi, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR)
+
+        qr_text, bbox = detect_qr(qr_big)
 
         if bbox is not None:
             try:
@@ -778,12 +807,13 @@ def camera_loop():
             latest_frame = frame.copy()
             stream_frame = display_frame.copy()
 
-        if scan_requested and not scan_running:
-            scan_requested = False
+        # START_SCAN 없이 박스가 감지되면 자동 스캔 시작
+        if detected and not scan_running:
+            package_id = f"CAM_{datetime.now():%Y%m%d_%H%M%S}"
 
             threading.Thread(
                 target=scan_worker,
-                args=(current_package_id,),
+                args=(package_id,),
                 daemon=True
             ).start()
 
