@@ -59,7 +59,7 @@ BOX_STABLE_FRAMES = 5          # 연속 N프레임 감지되어야 캡쳐
 COOLDOWN_SECONDS = 3.0         # 캡쳐 후 다음 감지까지 대기 시간
 
 # OCR 설정
-OCR_FIXED_ROI = (80, 120, 560, 360)   # OCR 크롭 영역
+OCR_FIXED_ROI = (200, 150, 550, 380)   # OCR 크롭 영역
 OCR_MIN_CONFIDENCE = 0.05             # 신뢰도 기준 낮춤 (필드 파싱 성공이 더 중요)
 OCR_REQUIRED_MIN_FIELDS = 2
 OCR_ROTATION_ANGLES = [0, 90, 180, 270]  # 전방향 회전 검사
@@ -237,6 +237,45 @@ def parse_qr_payload(qr_text):
 
     return data
 
+# 흰 종이 찾기
+def crop_text_label_area(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # 흰 종이/밝은 라벨 영역 찾기
+    _, th = cv2.threshold(gray, 160, 255, cv2.THRESH_BINARY)
+
+    contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    h, w = frame.shape[:2]
+    candidates = []
+
+    for cnt in contours:
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        area = bw * bh
+
+        if area < 3000:
+            continue
+        if bw < 80 or bh < 40:
+            continue
+        if bw > w * 0.95 or bh > h * 0.95:
+            continue
+
+        candidates.append((x, y, x + bw, y + bh, area))
+
+    if not candidates:
+        return frame
+
+    # 가장 큰 흰 라벨 영역 선택
+    x1, y1, x2, y2, _ = max(candidates, key=lambda c: c[4])
+
+    margin = 40
+    x1 = max(x1 - margin, 0)
+    y1 = max(y1 - margin, 0)
+    x2 = min(x2 + margin, w)
+    y2 = min(y2 + margin, h)
+
+    return frame[y1:y2, x1:x2].copy()
+
 
 # =========================
 # OCR 인식
@@ -251,14 +290,33 @@ def try_ocr(frame):
     try:
         # 글자 크기 키우기 (1장만)
         h, w = frame.shape[:2]
-        scale = 2.0 if max(h, w) < 500 else 1.5
-        up = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+        # OCR 입력을 너무 크게 만들지 않음
+        # target_w = 360
+        # if w > target_w:
+        #     scale = target_w / w
+        #     up = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        # else:
+        #     up = frame
+
+        #up = frame
+
+        up = crop_text_label_area(frame)
+
+        # # 살짝 확대
+        # up = cv2.resize(
+        #     up,
+        #     None,
+        #     fx=1.3,
+        #     fy=1.3,
+        #     interpolation=cv2.INTER_LINEAR
+        # )
 
         rotations = [
             (0,   None),
-            (90,  cv2.ROTATE_90_CLOCKWISE),
+            #(90,  cv2.ROTATE_90_CLOCKWISE),
             (180, cv2.ROTATE_180),
-            (270, cv2.ROTATE_90_COUNTERCLOCKWISE),
+            #(270, cv2.ROTATE_90_COUNTERCLOCKWISE),
         ]
 
         # 라벨 키워드 목록 (이것들이 읽혔다 = 글자 방향이 맞다)
@@ -337,6 +395,8 @@ def parse_ocr_fields(text):
     """OCR 텍스트에서 송장번호/이름/지역 추출"""
     import re
 
+    print("[OCR RAW]", text)
+
     # 라벨 오타 보정 (승장→송장, 숭장→송장 등)
     text = re.sub(r"[승숭중]\s*장\s*번\s*[호오흐]", "송장번호", text)
     text = re.sub(r"송\s*장\s*번\s*[호오흐]", "송장번호", text)
@@ -371,6 +431,51 @@ def parse_ocr_fields(text):
     invoice_raw = extract(["송장번호"], ["이름", "지역"])
     name_raw = extract(["이름"], ["송장번호", "지역"])
     region_raw = extract(["지역"], ["송장번호", "이름"])
+
+    if not region_raw:
+        region_match = re.search(
+            r"(서울|부산|인천|대구|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)",
+            text
+        )
+
+        if region_match:
+            region_raw = region_match.group(1)
+
+    # OCR이 지역 라벨을 이상하게 읽었을 때 보정
+    region_ocr_fix = {
+        # 경기
+        "우조구보우": "경기",
+        "경7": "경기",
+        "경71": "경기",
+        "겨기": "경기",
+        "경기E": "경기",
+        "경기C": "경기",
+        "경71도": "경기",
+        "경기도0": "경기",
+        "경기E도": "경기",
+
+        "부신": "부산",
+        "부싼": "부산",
+
+        "인전": "인천",
+
+        # 서울
+        "서움": "서울",
+        "시울": "서울",
+        "서율": "서울",
+        "서을": "서울",
+        "서운": "서울",
+        "서은": "서울",
+        "시을": "서울",
+        "서울E": "서울",
+        "서울C": "서울",
+    }
+
+    for wrong, fixed in region_ocr_fix.items():
+        if wrong in text:
+            region_raw = fixed
+            break
+
 
     # 송장번호: 숫자만 추출 + OCR 오인식 보정
     invoice_clean = invoice_raw
@@ -424,12 +529,40 @@ REGION_MAP = [
 ]
 
 
+# def match_region(text):
+#     """텍스트에서 지역명 매칭"""
+#     for keyword, code in REGION_MAP:
+#         if keyword in text:
+#             return keyword, code
+#     return "", ""
+
+
 def match_region(text):
-    """텍스트에서 지역명 매칭"""
-    for keyword, code in REGION_MAP:
-        if keyword in text:
-            return keyword, code
-    return "", ""
+    region_alias = {
+        "경기": "경기도",
+        "서울": "서울",
+        "부산": "부산",
+        "인천": "인천",
+        "대구": "대구",
+        "광주": "광주",
+        "대전": "대전",
+        "울산": "울산",
+        "세종": "세종",
+        "강원": "강원도",
+        "충북": "충청북도",
+        "충남": "충청남도",
+        "전북": "전라북도",
+        "전남": "전라남도",
+        "경북": "경상북도",
+        "경남": "경상남도",
+        "제주": "제주도",
+    }
+
+    for short_name, full_name in region_alias.items():
+        if short_name in text:
+            return full_name, short_name
+
+    return "-", "-"
 
 
 # =========================
@@ -449,7 +582,8 @@ def run_recognition(frame, package_id):
 
     # --- 1단계: QR 시도 ---
     print("[RECOGNITION] QR 인식 시도...")
-    qr_data = try_qr(frame)
+    # qr_data = try_qr(frame) # <- 주석처리
+    qr_data = None  # ← 강제 실패
 
     if qr_data:
         sort_code = f"{qr_data['region']}_{qr_data['package_type']}"
@@ -480,7 +614,11 @@ def run_recognition(frame, package_id):
 
     # --- 2단계: OCR 시도 ---
     print("[RECOGNITION] QR 실패 → OCR 인식 시도...")
-    ocr_data = try_ocr(frame)
+    ox1, oy1, ox2, oy2 = OCR_FIXED_ROI
+    ocr_frame = frame[oy1:oy2, ox1:ox2].copy()
+
+    ocr_data = try_ocr(ocr_frame)
+    # ocr_data = try_ocr(frame)
 
     if ocr_data:
         sort_code = f"{ocr_data['region_code']}_{ocr_data.get('package_type', 'BOX')}"
