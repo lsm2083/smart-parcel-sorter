@@ -161,27 +161,47 @@ def detect_box_in_roi(frame):
 def try_qr(frame):
     """QR 인식 시도 (0°/90°/180°/270° 회전, 해상도 업스케일). 성공하면 파싱된 dict 반환, 실패하면 None"""
     # 작은 QR 대응: 해상도를 2배로 키워서 시도
-    h, w = frame.shape[:2]
-    scale = 2.0 if max(h, w) < 800 else 1.5
-    upscaled = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    # h, w = frame.shape[:2]
+    # scale = 2.0 if max(h, w) < 800 else 1.5
+    # upscaled = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
-    rotations = [
-        (0,   None),
-        (90,  cv2.ROTATE_90_CLOCKWISE),
-        (180, cv2.ROTATE_180),
-        (270, cv2.ROTATE_90_COUNTERCLOCKWISE),
-    ]
-    # 원본 크기와 업스케일 둘 다 시도
-    for img_label, img in [("upscaled", upscaled), ("original", frame)]:
-        for angle, rot_code in rotations:
-            try:
-                rotated = img if rot_code is None else cv2.rotate(img, rot_code)
-                qr_text, bbox = detect_qr(rotated)
-                if qr_text:
-                    print(f"[QR] 인식 성공 ({img_label}, angle={angle}°): {qr_text}")
-                    return parse_qr_payload(qr_text)
-            except Exception as e:
-                print(f"[QR] 예외 ({img_label}, angle={angle}°): {e}")
+    # rotations = [
+    #     (0,   None),
+    #     (90,  cv2.ROTATE_90_CLOCKWISE),
+    #     (180, cv2.ROTATE_180),
+    #     (270, cv2.ROTATE_90_COUNTERCLOCKWISE),
+    # ]
+    # # 원본 크기와 업스케일 둘 다 시도
+    # for img_label, img in [("upscaled", upscaled), ("original", frame)]:
+    #     for angle, rot_code in rotations:
+    #         try:
+    #             rotated = img if rot_code is None else cv2.rotate(img, rot_code)
+    #             qr_text, bbox = detect_qr(rotated)
+    #             if qr_text:
+    #                 print(f"[QR] 인식 성공 ({img_label}, angle={angle}°): {qr_text}")
+    #                 return parse_qr_payload(qr_text)
+    #         except Exception as e:
+    #             print(f"[QR] 예외 ({img_label}, angle={angle}°): {e}")
+    # return None
+
+    qr_big = cv2.resize(
+        frame,
+        None,
+        fx=1.5,
+        fy=1.5,
+        interpolation=cv2.INTER_LINEAR
+    )
+
+    for i in range(3):
+        qr_text, bbox = detect_qr(qr_big)
+
+        if qr_text:
+            print(f"[QR] {i + 1}번째 시도 성공:", qr_text)
+            return parse_qr_payload(qr_text)
+
+        print(f"[QR] {i + 1}번째 시도 실패")
+        time.sleep(0.2)
+
     return None
 
 
