@@ -579,7 +579,17 @@ def scan_worker(package_id):
             qr_text = None
 
             for i in range(3):
-                qr_text, bbox = detect_qr(frame)
+                # qr_text, bbox = detect_qr(frame)
+
+                qr_big = cv2.resize(
+                    frame,
+                    None,
+                    fx=1.5,
+                    fy=1.5,
+                    interpolation=cv2.INTER_LINEAR
+                )
+
+                qr_text, bbox = detect_qr(qr_big)
 
                 if qr_text:
                     print(f"[QR] {i + 1}번째 시도 성공:", qr_text)
@@ -641,7 +651,7 @@ def scan_worker(package_id):
         # =========================
         # QR 실패 상태에서 OCR 시도
         # =========================
-        if not ocr_sent and time.time() - last_ocr_time >= 2.0:
+        if not ocr_sent and time.time() - last_ocr_time >= 0.3:
 
         # ocr 테스트용
         #if time.time() - last_ocr_time >= 1.0:
@@ -770,14 +780,16 @@ def camera_loop():
             )
 
         # QR 박스 표시
-        h, w = frame.shape[:2]
+        # h, w = frame.shape[:2]
 
         # QR이 보통 화면 오른쪽 라벨 쪽에 있으니까 오른쪽 중앙만 자름
-        qr_roi = frame[int(h*0.15):int(h*0.75), int(w*0.35):int(w*0.90)].copy()
+        # qr_roi = frame[int(h*0.15):int(h*0.75), int(w*0.35):int(w*0.90)].copy()
 
         # QR 확대
-        qr_big = cv2.resize(qr_roi, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR)
+        # qr_big = cv2.resize(qr_roi, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR)
 
+
+        qr_big = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_LINEAR)
         qr_text, bbox = detect_qr(qr_big)
 
         if bbox is not None:
