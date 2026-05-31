@@ -10,7 +10,7 @@ COMMON_DIR = os.path.join(PROJECT_DIR, "common")
 if COMMON_DIR not in sys.path:
     sys.path.insert(0, COMMON_DIR)
 
-from common.topics import SYSTEM_EMERGENCY
+from topics import SYSTEM_EMERGENCY
 
 
 class AgentBase:

@@ -1,6 +1,6 @@
-import sys
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
 import threading
-sys.path.append('../common')
 
 from agent_base import AgentBase
 from topics import CONVEYOR_COMMAND, CONVEYOR_RESULT, CONVEYOR_SENSOR, CONVEYOR_STATUS
