@@ -13,7 +13,6 @@ class ConveyorAgent(AgentBase):
         self.arduino = serial.Serial('COM3', 9600, timeout=1)
         print("[CONVEYOR] Arduino 연결됨 (COM3)")
 
-        # Arduino 이벤트 수신 스레드 시작
         threading.Thread(target=self.listen_arduino, daemon=True).start()
 
     def handle_command(self, data):
@@ -25,27 +24,20 @@ class ConveyorAgent(AgentBase):
             self.publish_event(CONVEYOR_STATUS, {
                 "motor": "ON",
                 "actuator": "STOP",
-                "speed": 180,
                 "status": "작동중"
             })
-
-        # elif cmd == 'CONVEYOR_STOP':
-        #     print("[TEST] Arduino에 STOP 전송")
-        #     self.arduino.write(b"CONVEYOR_STOP\n")
-        #     print("[TEST] Arduino 전송 완료")
-        #     self.publish_result(cmd, 'DONE')
-        #     self.publish_event(CONVEYOR_STATUS, {
-        #         "motor": "OFF",
-        #         "actuator": "STOP",
-        #         "speed": 0,
-        #         "status": "정지"
-        #     })
 
         elif cmd == 'CONVEYOR_STOP':
             cmd_str = b"CONVEYOR_STOP\n"
             print(f"[SEND] {repr(cmd_str)}")
             self.arduino.write(cmd_str)
             print("[TEST] Arduino 전송 완료")
+            self.publish_result(cmd, 'DONE')
+            self.publish_event(CONVEYOR_STATUS, {
+                "motor": "OFF",
+                "actuator": "STOP",
+                "status": "정지"
+            })
 
         elif cmd == 'EMERGENCY_STOP':
             self.arduino.write(b"EMERGENCY_STOP\n")
@@ -53,7 +45,6 @@ class ConveyorAgent(AgentBase):
             self.publish_event(CONVEYOR_STATUS, {
                 "motor": "OFF",
                 "actuator": "STOP",
-                "speed": 0,
                 "status": "비상정지"
             })
 
@@ -69,32 +60,41 @@ class ConveyorAgent(AgentBase):
                 if not line:
                     continue
 
-                print(f"[RAW] '{line}'")
                 print(f"[ARDUINO] {line}")
 
                 if line == "EVENT:PHYSICAL_ESTOP":
-                    print("[TEST] ESTOP 발행 시도")
+                    print("[CONVEYOR] 물리 비상정지 발동")
                     self.publish_event(CONVEYOR_SENSOR, {"event": "PHYSICAL_ESTOP"})
+
                 elif line == "EVENT:ESTOP_RELEASED":
-                    print("[TEST] ESTOP 해제 발행")
+                    print("[CONVEYOR] 비상정지 해제")
                     self.publish_event(CONVEYOR_SENSOR, {"event": "ESTOP_RELEASED"})
-                elif line == "EVENT:PACKAGE_DETECTED":
-                    self.publish_event(CONVEYOR_SENSOR, {"event": "PACKAGE_DETECTED"})
-                elif line == "EVENT:SCAN_POSITION_ARRIVED":
-                    self.publish_event(CONVEYOR_SENSOR, {"event": "SCAN_POSITION_ARRIVED"})
-                elif line.startswith("STATUS:speed="):
-                    speed_val = line.split("=")[1]
-                    print(f"[TEST] 속도 발행: {speed_val}")
-                    self.publish_event(CONVEYOR_STATUS, {
-                        "motor": "ON",
-                        "actuator": "STOP",
-                        "speed": int(speed_val),
-                        "status": "작동중"
+
+                # 박스에 로봇팔 감지 (카운트 누적)
+                elif line.startswith("EVENT:BOX_COUNT:"):
+                    parts = line.split(":")
+                    box_num = int(parts[2])
+                    count = int(parts[3])
+                    print(f"[CONVEYOR] BOX{box_num} 카운트: {count}/4")
+                    self.publish_event(CONVEYOR_SENSOR, {
+                        "event": "BOX_COUNT",
+                        "box": box_num,
+                        "count": count
+                    })
+
+                # 박스 가득 참 (4개 도달) → Flask로 전달할 핵심 신호
+                elif line.startswith("EVENT:BOX_FULL:"):
+                    box_num = int(line.split(":")[-1])
+                    print(f"[CONVEYOR] 🚛 BOX{box_num} 가득 참! 라즈베리카 호출 필요")
+                    self.publish_event(CONVEYOR_SENSOR, {
+                        "event": "BOX_FULL",
+                        "box": box_num
                     })
 
             except Exception as e:
                 print(f"[CONVEYOR] Arduino 수신 오류: {e}")
                 break
+
 
 if __name__ == '__main__':
     agent = ConveyorAgent('192.168.0.21')

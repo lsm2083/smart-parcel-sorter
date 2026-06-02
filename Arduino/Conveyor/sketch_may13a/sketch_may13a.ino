@@ -17,7 +17,6 @@ unsigned long lastDetectTime[SENSOR_COUNT] = {0, 0, 0, 0, 0, 0};
 
 bool emergencyStop = false;
 bool lastSensorState[SENSOR_COUNT] = {false};
-unsigned long lastStatusPrint = 0;
 bool conveyorRunning = false;
 bool dirForward = false;
 int stepDelay = 500;
@@ -65,42 +64,29 @@ void loop() {
     Serial.println("EVENT:ESTOP_RELEASED");
   }
 
-  // 상태 출력 (1초마다)
-  if (millis() - lastStatusPrint >= 1000) {
-    lastStatusPrint = millis();
-    if (conveyorRunning) {
-      Serial.print("STATUS:speed=");
-      Serial.print(stepDelay);
-      Serial.print(",dir=");
-      Serial.println(dirForward ? "FWD" : "BWD");
-    }
-  }
-
   // 분류 박스 센서 6개 체크 (들어오는 순간만 감지)
   unsigned long now = millis();
   for (int i = 0; i < SENSOR_COUNT; i++) {
     bool curState = (digitalRead(SENSOR_PINS[i]) == LOW);  // LOW = 감지
     
-    // 새로 감지된 순간 (이전엔 없었는데 지금 있음) + 디바운스 통과
+    // 새로 감지된 순간 + 디바운스 통과
     if (curState && !lastSensorState[i]) {
       if (now - lastDetectTime[i] >= DEBOUNCE_MS) {
         lastDetectTime[i] = now;
         boxCount[i]++;
         
-        // 매번 카운트 알림 (디버깅/모니터링용)
         Serial.print("EVENT:BOX_COUNT:");
         Serial.print(i + 1);
         Serial.print(":");
         Serial.println(boxCount[i]);
         
-        // 4개 차면 Flask에 보낼 신호 발생 + 자동 리셋
+        // 4개 차면 Flask에 보낼 신호 + 자동 리셋
         if (boxCount[i] >= BOX_FULL_COUNT) {
           Serial.print("EVENT:BOX_FULL:");
           Serial.println(i + 1);
-          boxCount[i] = 0;  // 자동 리셋
+          boxCount[i] = 0;
         }
       }
-      // 디바운스 시간 내면 그냥 무시 (로그도 안 찍음)
     }
     
     lastSensorState[i] = curState;
@@ -151,16 +137,6 @@ void handleSerial() {
       digitalWrite(dirPin, dirForward ? HIGH : LOW);
       Serial.println(dirForward ? "OK:DIR_FORWARD" : "OK:DIR_BACKWARD");
 
-    } else if (cmd.startsWith("SPEED:")) {
-      int newSpeed = cmd.substring(6).toInt();
-      if (newSpeed >= 200 && newSpeed <= 5000) {
-        stepDelay = newSpeed;
-        Serial.print("OK:SPEED=");
-        Serial.println(stepDelay);
-      } else {
-        Serial.println("ERR:SPEED_OUT_OF_RANGE");
-      }
-
     } else if (cmd == "SENSOR_STATUS") {
       Serial.print("STATUS:SENSORS=");
       for (int i = 0; i < SENSOR_COUNT; i++) {
@@ -169,7 +145,6 @@ void handleSerial() {
       Serial.println();
 
     } else if (cmd == "COUNT_STATUS") {
-      // 박스별 현재 카운트 조회
       Serial.print("STATUS:COUNTS=");
       for (int i = 0; i < SENSOR_COUNT; i++) {
         Serial.print(boxCount[i]);
@@ -178,7 +153,6 @@ void handleSerial() {
       Serial.println();
 
     } else if (cmd.startsWith("RESET_COUNT:")) {
-      // 특정 박스 카운트 리셋 (예: RESET_COUNT:3)
       int boxNum = cmd.substring(12).toInt();
       if (boxNum >= 1 && boxNum <= SENSOR_COUNT) {
         boxCount[boxNum - 1] = 0;
@@ -189,7 +163,6 @@ void handleSerial() {
       }
 
     } else if (cmd == "RESET_ALL_COUNTS") {
-      // 전체 박스 카운트 리셋
       for (int i = 0; i < SENSOR_COUNT; i++) {
         boxCount[i] = 0;
       }
