@@ -1,155 +1,129 @@
-import threading
+"""
+이미지에서 OCR 텍스트 추출. EasyOCR 사용 (한글+영어).
+
+전처리 전략:
+  - USE_PREPROCESSING=True: 원본도 시도, 전처리(그레이+이진화)도 시도, 더 좋은 쪽 채택
+  - USE_PREPROCESSING=False: 원본만 시도 (속도 2배 빠름)
+"""
 import cv2
 import easyocr
-import time
+import numpy as np
 
-# 반드시 함수 밖에서 1회만 생성합니다.
-# 함수 안에서 Reader를 만들면 OCR 실행마다 모델을 다시 로딩해서 매우 느려집니다.
-# reader = easyocr.Reader(["ko", "en"], gpu=False)
-reader = None
 
-def _load_reader():
-    global reader
-    reader = easyocr.Reader(["ko", "en"], gpu=False)
-    print("[OCR] 모델 로딩 완료")
+# 전처리 활성화 여부. False면 원본만 OCR → 속도 2배 빠름.
+USE_PREPROCESSING = False
 
-threading.Thread(target=_load_reader, daemon=True).start()
 
-def _to_easyocr_image(image):
-    if image is None:
+_reader = None
+
+
+def _get_reader():
+    global _reader
+    if _reader is None:
+        print("[OCR] 모델 로딩 중...")
+        _reader = easyocr.Reader(['ko', 'en'], gpu=False)
+        print("[OCR] 모델 로딩 완료")
+    return _reader
+
+
+def _preprocess_for_ocr(image):
+    """
+    OCR용 전처리: 그레이스케일 → 대비 강화 → 적응형 이진화.
+    검정 글자 + 흰 배경 라벨에 최적화.
+    """
+    if image is None or image.size == 0:
         return None
 
-    if len(image.shape) == 2:
-        return image
+    # 그레이스케일
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image.copy()
 
-    if len(image.shape) == 3 and image.shape[2] == 4:
-        image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+    # CLAHE: 국부 대비 강화 (조명 균일하지 않을 때 효과적)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(gray)
 
-    return image
+    # 적응형 이진화 (OTSU보다 조명 변화에 강함)
+    binary = cv2.adaptiveThreshold(
+        enhanced, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        blockSize=31,   # 31x31 윈도우. 글자 크기보다 살짝 크게
+        C=10            # 평균에서 빼는 값. 클수록 더 엄격
+    )
 
+    # 살짝 노이즈 제거 (글자가 깨지지 않을 정도로만)
+    kernel = np.ones((2, 2), np.uint8)
+    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
 
-def _resize_if_too_large(image, max_width=900):
-    h, w = image.shape[:2]
-
-    if w <= max_width:
-        return image
-
-    scale = max_width / float(w)
-    return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-
-
-def _sort_ocr_results(results):
-    def key_func(item):
-        bbox, text, confidence = item
-        xs = [p[0] for p in bbox]
-        ys = [p[1] for p in bbox]
-        return (sum(ys) / len(ys), sum(xs) / len(xs))
-
-    return sorted(results, key=key_func)
+    return binary
 
 
-def _normalize_piece(text):
-    text = str(text).strip()
-    text = text.replace("\n", " ").replace("\r", " ")
-    return " ".join(text.split())
-
-
-def detect_ocr(frame):
-    global reader
-
-    if reader is None:
-        print("[OCR] 모델 로딩 중... 대기")
-        while reader is None:
-            time.sleep(0.1)
-
-    if frame is None or frame.size == 0:
-        return {
-            "text": "",
-            "confidence": 0.0,
-            "raw": [],
-            "message": "EMPTY_FRAME"
-        }
-
-    image = _to_easyocr_image(frame)
-
-    if image is None or image.size == 0:
-        return {
-            "text": "",
-            "confidence": 0.0,
-            "raw": [],
-            "message": "EMPTY_IMAGE"
-        }
-
-    # cam_stream_test.py에서 이미 crop/확대를 수행하므로 여기서는 과한 전처리를 하지 않습니다.
-    # blur/adaptiveThreshold를 넣으면 한글이 뭉개져서 '서울 -> 서움' 같은 오인식이 늘 수 있습니다.
-    image = _resize_if_too_large(image, max_width=600)
-
+def _run_ocr(reader, image):
+    """단일 이미지로 OCR 시도. 결과 dict 또는 None."""
     try:
+        # 속도 옵션:
+        #  - canvas_size: 내부 처리 해상도 상한 (작을수록 빠름)
+        #  - mag_ratio: 확대 배율 (1.0이면 확대 안 함, 빠름)
+        #  - text_threshold/low_text: 검출 민감도 (라벨은 글자 크고 선명하니 높여도 됨)
         results = reader.readtext(
-            # image,
-            # detail=1,
-            # paragraph=False,
-            # batch_size=1,
-            # workers=0,
-            # decoder="greedy",
-            # width_ths=1.0,
-            # height_ths=0.7,
-            # ycenter_ths=0.7,
-            # text_threshold=0.30,
-            # low_text=0.15,
-            # link_threshold=0.35,
-            # add_margin=0.04,
-            # canvas_size=1280,
-            # mag_ratio=1.0,
-            # contrast_ths=0.10,
-            # adjust_contrast=0.50
-
-            # 최적화
             image,
-            detail=1,
-            paragraph=False,
-            batch_size=1,
-            workers=0,
-            decoder="greedy",
-            canvas_size=960,
-            mag_ratio=1.0
+            canvas_size=480,
+            mag_ratio=1.0,
+            text_threshold=0.6,
+            low_text=0.4,
         )
     except Exception as e:
-        return {
-            "text": "",
-            "confidence": 0.0,
-            "raw": [],
-            "message": f"EASYOCR_EXCEPTION: {e}"
-        }
+        print(f"[OCR] 인식 오류: {e}")
+        return None
+
+    if not results:
+        return None
 
     texts = []
-    confidences = []
+    confs = []
+    for _, text, conf in results:
+        text = text.strip()
+        if text:
+            texts.append(text)
+            confs.append(conf)
 
-    for bbox, text, confidence in _sort_ocr_results(results):
-        text = _normalize_piece(text)
-
-        if not text:
-            continue
-
-        confidence = float(confidence)
-
-        # 라벨 글자는 confidence가 낮게 나오는 경우가 많아서 낮게 둡니다.
-        # 최종 성공 여부는 cam_stream_test.py의 파싱 결과로 판단합니다.
-        if confidence < 0.05:
-            continue
-
-        texts.append(text)
-        confidences.append(confidence)
-
-    full_text = " ".join(texts).strip()
-
-    avg_confidence = 0.0
-    if confidences:
-        avg_confidence = sum(confidences) / len(confidences)
+    if not texts:
+        return None
 
     return {
-        "text": full_text,
-        "confidence": avg_confidence,
-        "raw": results,
-        "message": "OK" if full_text else "NO_TEXT"
+        "text": " ".join(texts),
+        "confidence": sum(confs) / len(confs),
     }
+
+
+def detect_ocr(image):
+    """
+    이미지(BGR/Gray numpy array) → OCR 결과 dict.
+    USE_PREPROCESSING=False면 원본만, True면 원본+이진화 둘 다 시도.
+    """
+    if image is None or image.size == 0:
+        return None
+
+    reader = _get_reader()
+
+    # 원본 시도
+    raw_result = _run_ocr(reader, image)
+
+    if not USE_PREPROCESSING:
+        return raw_result
+
+    # 전처리 후 시도
+    preprocessed = _preprocess_for_ocr(image)
+    pp_result = _run_ocr(reader, preprocessed) if preprocessed is not None else None
+
+    # 더 좋은 결과 선택 (text 길이 + confidence 가중)
+    def _score(r):
+        if r is None:
+            return -1.0
+        return len(r["text"]) * r["confidence"]
+
+    if _score(pp_result) > _score(raw_result):
+        return pp_result
+    return raw_result

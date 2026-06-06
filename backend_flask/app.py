@@ -23,11 +23,17 @@ def register_all():
     from routes.package_routes import package_bp
     from routes.log_routes import log_bp
     from routes.emergency_routes import emergency_bp
+    from routes.yolo_routes import yolo_bp
+    from routes.storage_routes import storage_bp
+    from routes.blackbox_routes import blackbox_bp      # ★ 추가
 
     app.register_blueprint(status_bp, url_prefix='/api')
     app.register_blueprint(package_bp, url_prefix='/api')
     app.register_blueprint(log_bp, url_prefix='/api')
     app.register_blueprint(emergency_bp, url_prefix='/api')
+    app.register_blueprint(yolo_bp, url_prefix='/api')
+    app.register_blueprint(storage_bp)
+    app.register_blueprint(blackbox_bp, url_prefix='/api')  # ★ 추가
 
     # 핸들러 먼저 등록
     from mqtt.mqtt_client import register_mqtt_handlers
@@ -40,5 +46,5 @@ def register_all():
 if __name__ == '__main__':
     from database.db import init_db
     init_db()
-    register_all()
+    register_all()                     # ← 이게 빠져있었음
     socketio.run(app, host='0.0.0.0', port=5000)

@@ -91,12 +91,16 @@ def _process_message(app, topic, payload):
                 handle_scan_result(data)
 
             elif topic == VISION_FAIL:
-                if data.get('type') == 'QR_FAIL':
-                    from services.package_service import handle_qr_fail
-                    handle_qr_fail(data)
-                elif data.get('type') == 'OCR_FAIL':
-                    from services.package_service import handle_ocr_fail
-                    handle_ocr_fail(data)
+                ftype = data.get('type')
+                if ftype == 'QR_OCR_MISMATCH':
+                    from services.package_service import handle_mismatch
+                    handle_mismatch(data)
+                elif ftype == 'OCR_FAIL':
+                    from services.package_service import handle_scan_fail
+                    handle_scan_fail(data)
+                elif ftype == 'SCAN_FAILED':
+                    from services.package_service import handle_scan_failed_event
+                    handle_scan_failed_event(data)
 
             elif topic == ROBOT_RESULT:
                 from services.sort_service import handle_sort_result

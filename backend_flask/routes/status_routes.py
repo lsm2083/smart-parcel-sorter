@@ -12,6 +12,7 @@ def update_emergency(value):
     global _is_emergency
     _is_emergency = value
 
+
 def update_conveyor_realtime(speed, status):
     global _conveyor_speed, _conveyor_status_label
     _conveyor_speed = speed
@@ -27,52 +28,56 @@ def update_conveyor_connected():
 @status_bp.route('/status')
 def get_status():
     conn = get_db()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    cur.execute("SELECT device_id, status FROM device_status")
-    devices = {row['device_id']: row['status'] for row in cur.fetchall()}
+        cur.execute("SELECT device_id, status FROM device_status")
+        devices = {row['device_id']: row['status'] for row in cur.fetchall()}
 
-    def label(device_id):
-        s = devices.get(device_id, 'DISCONNECTED')
-        return {'ONLINE': '작동중', 'DISCONNECTED': '오프라인'}.get(s, s)
+        def label(device_id):
+            s = devices.get(device_id, 'DISCONNECTED')
+            return {'ONLINE': '작동중', 'DISCONNECTED': '오프라인'}.get(s, s)
 
-    cur.execute(
-        "SELECT COUNT(*) AS cnt FROM sort_logs WHERE DATE(completed_at)=CURDATE() AND sort_result='SORT_DONE'"
-    )
-    today_sorted = cur.fetchone()['cnt']
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM sort_logs "
+            "WHERE DATE(completed_at)=CURDATE() AND sort_result='SORT_DONE'"
+        )
+        today_sorted = cur.fetchone()['cnt']
 
-    cur.execute(
-        "SELECT COUNT(*) AS cnt FROM error_logs WHERE DATE(created_at)=CURDATE()"
-    )
-    today_error = cur.fetchone()['cnt']
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM error_logs WHERE DATE(created_at)=CURDATE()"
+        )
+        today_error = cur.fetchone()['cnt']
 
-    cur.execute(
-        "SELECT COUNT(*) AS cnt FROM sort_logs WHERE DATE(completed_at)=CURDATE()"
-    )
-    total_today = cur.fetchone()['cnt']
-    success_rate = round((today_sorted / total_today * 100), 1) if total_today > 0 else 0.0
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM sort_logs WHERE DATE(completed_at)=CURDATE()"
+        )
+        total_today = cur.fetchone()['cnt']
+        success_rate = round((today_sorted / total_today * 100), 1) if total_today > 0 else 0.0
 
-    conn.close()
-
-    return jsonify({
-        "conveyorStatus":   _conveyor_status_label,
-        "conveyorSpeed":    _conveyor_speed,
-        "robotArmStatus":   label('robot'),
-        "ocrCamStatus":     label('vision'),
-        "qrCamStatus":      label('vision'),
-        "emergencyStop":    _is_emergency,
-        "inputUnitStatus":  "대기",
-        "todaySortedCount": today_sorted,
-        "todayErrorCount":  today_error,
-        "successRate":      success_rate,
-    })
+        return jsonify({
+            "conveyorStatus":   _conveyor_status_label,
+            "conveyorSpeed":    _conveyor_speed,
+            "robotArmStatus":   label('robot'),
+            "ocrCamStatus":     label('vision'),
+            "qrCamStatus":      label('vision'),
+            "emergencyStop":    _is_emergency,
+            "inputUnitStatus":  "대기",
+            "todaySortedCount": today_sorted,
+            "todayErrorCount":  today_error,
+            "successRate":      success_rate,
+        })
+    finally:
+        conn.close()
 
 
 @status_bp.route('/devices')
 def get_devices():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM device_status")
-    rows = cur.fetchall()
-    conn.close()
-    return jsonify({'devices': list(rows)})
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM device_status")
+        rows = cur.fetchall()
+        return jsonify({'devices': list(rows)})
+    finally:
+        conn.close()

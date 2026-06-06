@@ -23,22 +23,24 @@ def handle_snapshot(data):
         description = _build_description(event_type_raw, data)
 
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO blackbox_events (event_type, camera_id, package_id, image_path, severity, description)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (event_label, data.get('camera_id'), package_id, image_path, severity, description))
-    row_id = cur.lastrowid
-    conn.commit()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO blackbox_events (event_type, camera_id, package_id, image_path, severity, description)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (event_label, data.get('camera_id'), package_id, image_path, severity, description))
+        row_id = cur.lastrowid
 
-    # 송장번호 조회
-    invoice_no = ''
-    if package_id:
-        cur.execute("SELECT invoice_no FROM packages WHERE id=%s", (package_id,))
-        pkg = cur.fetchone()
-        if pkg:
-            invoice_no = pkg['invoice_no'] or ''
-    conn.close()
+        invoice_no = ''
+        if package_id:
+            cur.execute("SELECT invoice_no FROM packages WHERE id=%s", (package_id,))
+            pkg = cur.fetchone()
+            if pkg:
+                invoice_no = pkg['invoice_no'] or ''
+
+        conn.commit()
+    finally:
+        conn.close()
 
     from datetime import datetime
     emit_blackbox_event_added({

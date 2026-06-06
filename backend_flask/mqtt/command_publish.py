@@ -3,7 +3,6 @@ import paho.mqtt.client as paho_mqtt
 from database.db import get_db
 from mqtt.topics import *
 
-# 발행 전용 MQTT 클라이언트 (flask-mqtt와 별도)
 _publisher = None
 
 
@@ -22,18 +21,18 @@ def publish_command(topic, command, **kwargs):
     print(f"[CMD] 발행: {topic} → {command}")
 
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO command_logs (device_id, command, payload, status) VALUES (%s,%s,%s,%s)",
-        (device_id, command, json.dumps(payload, ensure_ascii=False), 'SENT')
-    )
-    conn.commit()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO command_logs (device_id, command, payload, status) VALUES (%s,%s,%s,%s)",
+            (device_id, command, json.dumps(payload, ensure_ascii=False), 'SENT')
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
     get_publisher().publish(topic, json.dumps(payload, ensure_ascii=False))
 
-
-# ── 단축 함수
 
 def publish_actuator_forward(timeout=6000):
     publish_command(CONVEYOR_COMMAND, 'ACTUATOR_FORWARD', timeout=timeout)
@@ -50,8 +49,9 @@ def publish_conveyor_stop():
 def publish_vision_scan(package_id):
     publish_command(VISION_COMMAND, 'START_SCAN', package_id=package_id)
 
-def publish_sort(sort_code, package_id):
-    publish_command(ROBOT_COMMAND, 'SORT', sort_code=sort_code, package_id=package_id)
+def publish_sort(sort_code, package_id, box=None):
+    publish_command(ROBOT_COMMAND, 'SORT',
+                    sort_code=sort_code, box=box, package_id=package_id)
 
 def publish_robot_home():
     publish_command(ROBOT_COMMAND, 'HOME')
@@ -59,9 +59,9 @@ def publish_robot_home():
 def publish_blackbox_snapshot(reason):
     publish_command(BLACKBOX_COMMAND, 'SAVE_SNAPSHOT', reason=reason)
 
-def publish_forklift_move(device_id, from_pos, to_pos):
-    topic = f"parcel/forklift/{device_id}/command"
-    publish_command(topic, 'MOVE_PALLET', **{"from": from_pos, "to": to_pos})
+def publish_forklift_move(from_pos, to_pos):
+    publish_command(FORKLIFT_COMMAND, 'MOVE_PALLET',
+                    **{"from": from_pos, "to": to_pos})
 
 def publish_emergency_stop_all():
     get_publisher().publish(

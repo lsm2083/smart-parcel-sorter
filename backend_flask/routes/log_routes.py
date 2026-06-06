@@ -7,15 +7,17 @@ log_bp = Blueprint('logs', __name__)
 @log_bp.route('/logs/sort')
 def get_sort_logs():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT sl.*, p.region
-        FROM sort_logs sl
-        LEFT JOIN packages p ON sl.package_id = p.id
-        ORDER BY sl.completed_at DESC LIMIT 100
-    """)
-    rows = cur.fetchall()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT sl.*, p.region
+            FROM sort_logs sl
+            LEFT JOIN packages p ON sl.package_id = p.id
+            ORDER BY sl.completed_at DESC LIMIT 100
+        """)
+        rows = cur.fetchall()
+    finally:
+        conn.close()
 
     result = []
     for r in rows:
@@ -38,10 +40,12 @@ def get_sort_logs():
 @log_bp.route('/logs/shipping')
 def get_shipping_logs():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM shipping_logs ORDER BY created_at DESC LIMIT 100")
-    rows = cur.fetchall()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM shipping_logs ORDER BY created_at DESC LIMIT 100")
+        rows = cur.fetchall()
+    finally:
+        conn.close()
 
     result = []
     for r in rows:
@@ -60,15 +64,17 @@ def get_shipping_logs():
 @log_bp.route('/blackbox/events')
 def get_blackbox_events():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT be.*, p.invoice_no
-        FROM blackbox_events be
-        LEFT JOIN packages p ON be.package_id = p.id
-        ORDER BY be.created_at DESC LIMIT 100
-    """)
-    rows = cur.fetchall()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT be.*, p.invoice_no
+            FROM blackbox_events be
+            LEFT JOIN packages p ON be.package_id = p.id
+            ORDER BY be.created_at DESC LIMIT 100
+        """)
+        rows = cur.fetchall()
+    finally:
+        conn.close()
 
     result = []
     for r in rows:
@@ -89,10 +95,12 @@ def get_blackbox_events():
 @log_bp.route('/logs/login')
 def get_login_records():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM login_records ORDER BY created_at DESC LIMIT 100")
-    rows = cur.fetchall()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM login_records ORDER BY created_at DESC LIMIT 100")
+        rows = cur.fetchall()
+    finally:
+        conn.close()
 
     result = []
     for r in rows:
@@ -112,8 +120,10 @@ def get_login_records():
 @log_bp.route('/logs/error')
 def get_error_logs():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM error_logs ORDER BY created_at DESC LIMIT 50")
-    rows = cur.fetchall()
-    conn.close()
-    return jsonify({'logs': list(rows)})
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM error_logs ORDER BY created_at DESC LIMIT 50")
+        rows = cur.fetchall()
+        return jsonify({'logs': list(rows)})
+    finally:
+        conn.close()

@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify
+from database.db import get_db
+from mqtt.command_publish import publish_emergency_stop_all, publish_robot_home  # ← 복구
 from sockets.wpf_events import emit_emergency_stop, emit_emergency_reset
 
 emergency_bp = Blueprint('emergency', __name__)
@@ -6,26 +8,21 @@ emergency_bp = Blueprint('emergency', __name__)
 
 @emergency_bp.route('/emergency/stop', methods=['POST'])
 def emergency_stop():
-    from mqtt.command_publish import publish_emergency_stop_all
-    from routes.status_routes import update_conveyor_realtime, update_emergency
+    from routes.status_routes import update_emergency
     publish_emergency_stop_all()
-    update_conveyor_realtime(0, '비상정지')
-    update_emergency(True)
-    source = 'WPF'
-    if request.json:
-        source = request.json.get('source', 'WPF')
+    source = request.json.get('source', 'WPF')
     emit_emergency_stop(source=source)
+    update_emergency(True)                         # system_state 말고 이거
+    from services.fcm_service import send_emergency_stop_notification
+    send_emergency_stop_notification(source)
     return jsonify({'result': 'ok', 'system_status': 'EMERGENCY_STOP'})
-
 
 @emergency_bp.route('/emergency/reset', methods=['POST'])
 def emergency_reset():
-    from mqtt.command_publish import publish_robot_home
-    from routes.status_routes import update_conveyor_realtime, update_emergency
+    from routes.status_routes import update_emergency
     publish_robot_home()
-    update_conveyor_realtime(0, '정지중')
-    update_emergency(False)
     emit_emergency_reset()
+    update_emergency(False)                        # system_state 말고 이거
     return jsonify({'result': 'ok', 'system_status': 'STOPPED'})
 
 
@@ -72,3 +69,33 @@ def conveyor_command():
         update_emergency(True)
 
     return jsonify({'status': 'ok', 'command': command})
+
+
+@emergency_bp.route('/auth/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    employee_id = data.get('user_id', '')
+    password = data.get('password', '')
+
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM employees WHERE employee_id=%s AND password_hash=%s",
+            (employee_id, password)
+        )
+        user = cur.fetchone()
+    finally:
+        conn.close()
+
+    if user:
+        return jsonify({
+            'success': True,
+            'name': user['name'],
+            'role': '운영자',
+            'message': '로그인 성공'
+        })
+    return jsonify({
+        'success': False,
+        'message': '아이디 또는 비밀번호가 올바르지 않습니다.'
+    }), 401

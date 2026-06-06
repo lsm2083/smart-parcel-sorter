@@ -7,10 +7,13 @@ package_bp = Blueprint('package', __name__)
 @package_bp.route('/package/current')
 def get_current_package():
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT id, invoice_no, status FROM packages ORDER BY id DESC LIMIT 1")
-    row = cur.fetchone()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, invoice_no, status FROM packages ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+    finally:
+        conn.close()
+
     if not row:
         return jsonify({'package_id': None, 'status': 'WAIT_INPUT'})
     return jsonify({

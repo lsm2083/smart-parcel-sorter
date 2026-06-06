@@ -2,7 +2,7 @@ import pymysql
 
 # MySQL 연결 정보
 DB_CONFIG = {
-    'host': '192.168.0.13',
+    'host': '192.168.0.20',
     'port': 3306,
     'user': 'final_user',
     'password': '1234',        # ← 본인 MySQL 비밀번호로 변경
