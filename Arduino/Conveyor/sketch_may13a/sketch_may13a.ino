@@ -4,16 +4,17 @@ const int enaPin = 7;
 const int emergencyPin = 3;
 const int buzzerPin = 6;
 
-const int SENSOR_COUNT = 6;
-const int SENSOR_PINS[SENSOR_COUNT] = {22, 24, 26, 28, 30, 32};
+// 센서 7개 (BOX1~6: 일반 분류함, BOX7: 불량 박스)
+const int SENSOR_COUNT = 7;
+const int SENSOR_PINS[SENSOR_COUNT] = {22, 24, 26, 28, 30, 32, 34};
 
-// 박스별 카운트 (4개 차면 가득 참 신호 발생)
-const int BOX_FULL_COUNT = 4;
-int boxCount[SENSOR_COUNT] = {0, 0, 0, 0, 0, 0};
+// 박스별 가득 참 기준 (1~6번=4개, 7번 불량박스=6개)
+const int BOX_FULL_THRESHOLD[SENSOR_COUNT] = {4, 4, 4, 4, 4, 4, 6};
+int boxCount[SENSOR_COUNT] = {0, 0, 0, 0, 0, 0, 0};
 
 // 디바운스: 마지막 감지 시각 기록 (ms)
-const unsigned long DEBOUNCE_MS = 5000;  // 5초
-unsigned long lastDetectTime[SENSOR_COUNT] = {0, 0, 0, 0, 0, 0};
+const unsigned long DEBOUNCE_MS = 5000;
+unsigned long lastDetectTime[SENSOR_COUNT] = {0, 0, 0, 0, 0, 0, 0};
 
 bool emergencyStop = false;
 bool lastSensorState[SENSOR_COUNT] = {false};
@@ -27,7 +28,7 @@ void setup() {
   pinMode(enaPin, OUTPUT);
   pinMode(emergencyPin, INPUT_PULLUP);
   pinMode(buzzerPin, OUTPUT);
-  digitalWrite(buzzerPin, LOW);
+  digitalWrite(buzzerPin, HIGH);  // 부저 OFF 상태로 시작 (MH-FMD는 LOW 트리거)
 
   for (int i = 0; i < SENSOR_COUNT; i++) {
     pinMode(SENSOR_PINS[i], INPUT);
@@ -49,7 +50,7 @@ void loop() {
       emergencyStop = true;
       conveyorRunning = false;
       digitalWrite(enaPin, HIGH);
-      tone(buzzerPin, 1000);
+      digitalWrite(buzzerPin, LOW);  // 부저 ON
       Serial.println("EVENT:PHYSICAL_ESTOP");
     }
     return;
@@ -60,16 +61,15 @@ void loop() {
     emergencyStop = false;
     conveyorRunning = true;
     digitalWrite(enaPin, LOW);
-    noTone(buzzerPin);
+    digitalWrite(buzzerPin, HIGH);  // 부저 OFF
     Serial.println("EVENT:ESTOP_RELEASED");
   }
 
-  // 분류 박스 센서 6개 체크 (들어오는 순간만 감지)
+  // 분류 박스 센서 7개 체크
   unsigned long now = millis();
   for (int i = 0; i < SENSOR_COUNT; i++) {
-    bool curState = (digitalRead(SENSOR_PINS[i]) == LOW);  // LOW = 감지
+    bool curState = (digitalRead(SENSOR_PINS[i]) == LOW);
     
-    // 새로 감지된 순간 + 디바운스 통과
     if (curState && !lastSensorState[i]) {
       if (now - lastDetectTime[i] >= DEBOUNCE_MS) {
         lastDetectTime[i] = now;
@@ -80,9 +80,12 @@ void loop() {
         Serial.print(":");
         Serial.println(boxCount[i]);
         
-        // 4개 차면 Flask에 보낼 신호 + 자동 리셋
-        if (boxCount[i] >= BOX_FULL_COUNT) {
-          Serial.print("EVENT:BOX_FULL:");
+        if (boxCount[i] >= BOX_FULL_THRESHOLD[i]) {
+          if (i + 1 == 7) {
+            Serial.print("EVENT:DEFECT_BOX_FULL:");
+          } else {
+            Serial.print("EVENT:BOX_FULL:");
+          }
           Serial.println(i + 1);
           boxCount[i] = 0;
         }
@@ -92,7 +95,6 @@ void loop() {
     lastSensorState[i] = curState;
   }
 
-  // 펄스 출력
   if (conveyorRunning) {
     digitalWrite(stepPin, HIGH);
     delayMicroseconds(stepDelay);
@@ -119,7 +121,7 @@ void handleSerial() {
     } else if (cmd == "EMERGENCY_STOP") {
       conveyorRunning = false;
       digitalWrite(enaPin, HIGH);
-      noTone(buzzerPin);
+      digitalWrite(buzzerPin, HIGH);  // 부저 OFF
       Serial.println("OK:EMERGENCY_STOP");
 
     } else if (cmd == "DIR_FORWARD") {

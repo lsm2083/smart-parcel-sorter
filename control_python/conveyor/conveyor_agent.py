@@ -70,24 +70,35 @@ class ConveyorAgent(AgentBase):
                     print("[CONVEYOR] 비상정지 해제")
                     self.publish_event(CONVEYOR_SENSOR, {"event": "ESTOP_RELEASED"})
 
-                # 박스에 로봇팔 감지 (카운트 누적)
+                # 박스에 로봇팔 감지 (카운트 누적) - 7번 박스 포함
                 elif line.startswith("EVENT:BOX_COUNT:"):
                     parts = line.split(":")
                     box_num = int(parts[2])
                     count = int(parts[3])
-                    print(f"[CONVEYOR] BOX{box_num} 카운트: {count}/4")
+                    # 7번은 6개 기준, 나머지는 4개 기준
+                    threshold = 6 if box_num == 7 else 4
+                    print(f"[CONVEYOR] BOX{box_num} 카운트: {count}/{threshold}")
                     self.publish_event(CONVEYOR_SENSOR, {
                         "event": "BOX_COUNT",
                         "box": box_num,
                         "count": count
                     })
 
-                # 박스 가득 참 (4개 도달) → Flask로 전달할 핵심 신호
+                # 일반 박스 가득 참 (BOX1~6, 4개 도달)
                 elif line.startswith("EVENT:BOX_FULL:"):
                     box_num = int(line.split(":")[-1])
                     print(f"[CONVEYOR] 🚛 BOX{box_num} 가득 참! 라즈베리카 호출 필요")
                     self.publish_event(CONVEYOR_SENSOR, {
                         "event": "BOX_FULL",
+                        "box": box_num
+                    })
+
+                # 불량 박스 가득 참 (BOX7, 6개 도달)
+                elif line.startswith("EVENT:DEFECT_BOX_FULL:"):
+                    box_num = int(line.split(":")[-1])
+                    print(f"[CONVEYOR] ⚠️ 불량 박스(BOX{box_num}) 가득 참! 라즈베리카 호출 필요")
+                    self.publish_event(CONVEYOR_SENSOR, {
+                        "event": "DEFECT_BOX_FULL",
                         "box": box_num
                     })
 
