@@ -20,7 +20,18 @@ namespace MasterAdmin
         private bool _disposed;
 
         public Action<Mat>? OnFrame { get; set; }
+        public Action<Mat>? OnDisplayFrame { get; set; }
         public bool IsRunning { get; private set; }
+
+        // ── 최신 프레임 JPEG 저장 (불량 감지 시 이미지 전송용) ────────────
+        private byte[]? _latestJpeg;
+        private readonly object _jpegLock = new();
+
+        /// <summary>현재 카메라 프레임을 JPEG byte[]로 반환. 없으면 null.</summary>
+        public byte[]? GetLatestJpeg()
+        {
+            lock (_jpegLock) return _latestJpeg;
+        }
 
         // 로컬 카메라용 (기존)
         public CameraHelper(int deviceIndex, Image targetImage, StackPanel placeholder)
@@ -60,8 +71,18 @@ namespace MasterAdmin
                 ? new VideoCapture(_streamUrl)
                 : new VideoCapture(_deviceIndex, VideoCaptureAPIs.DSHOW);
 
-            cap.Set(VideoCaptureProperties.FrameWidth, 640);
-            cap.Set(VideoCaptureProperties.FrameHeight, 480);
+            // 출고캠(index 1) = YOLO 학습 해상도 1280×720 맞춤
+            // 현장캠(index 0) / 네트워크 스트림 = 640×480 유지
+            if (_deviceIndex == 1)
+            {
+                cap.Set(VideoCaptureProperties.FrameWidth, 1280);
+                cap.Set(VideoCaptureProperties.FrameHeight, 720);
+            }
+            else
+            {
+                cap.Set(VideoCaptureProperties.FrameWidth, 640);
+                cap.Set(VideoCaptureProperties.FrameHeight, 480);
+            }
             cap.Set(VideoCaptureProperties.BufferSize, 1);
 
             if (!cap.IsOpened())
@@ -87,7 +108,13 @@ namespace MasterAdmin
                 else
                     frame.CopyTo(flipped);
 
-                OnFrame?.Invoke(flipped.Clone());
+                OnFrame?.Invoke(flipped.Clone());   // YOLO 등 처리용 (클린 복사본)
+                OnDisplayFrame?.Invoke(flipped);     // ★ 화면 표시 직전 — 그리기 가능
+
+                // ★ 최신 프레임 JPEG 저장 (불량 감지 시 이미지 전송용)
+                Cv2.ImEncode(".jpg", flipped, out var jpegBuf,
+                    new ImageEncodingParam(ImwriteFlags.JpegQuality, 80));
+                lock (_jpegLock) { _latestJpeg = jpegBuf; }
 
                 Cv2.CvtColor(flipped, converted, ColorConversionCodes.BGR2BGRA);
 
@@ -95,7 +122,7 @@ namespace MasterAdmin
                 int h = converted.Height;
                 int stride = w * 4;
 
-                 _target.Dispatcher.Invoke(() =>
+                _target.Dispatcher.Invoke(() =>
                 {
                     if (wb == null || wb.PixelWidth != w || wb.PixelHeight != h)
                     {

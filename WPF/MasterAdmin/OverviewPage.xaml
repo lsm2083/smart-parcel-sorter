@@ -108,9 +108,9 @@
             </Border>
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="로그인 기록" Style="{StaticResource SecTitle}"/>
-                    <TextBlock Text="{Binding LoginRecords.Count}" Style="{StaticResource BigNum}" Foreground="#A78BFA"/>
-                    <TextBlock Text="총 접속 이력" Style="{StaticResource SubLabel}"/>
+                    <TextBlock Text="출고 건수" Style="{StaticResource SecTitle}"/>
+                    <TextBlock Text="{Binding ShippingLogs.Count}" Style="{StaticResource BigNum}" Foreground="#A78BFA"/>
+                    <TextBlock Text="총 출고 이력" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
             <Border Grid.Column="3" Style="{StaticResource Card}">
@@ -135,7 +135,7 @@
                 <ColumnDefinition Width="1.1*"/>
                 <!-- 중간: 블랙박스+통계 -->
                 <ColumnDefinition Width="0.75*"/>
-                <!-- 오른쪽: 로그인 -->
+                <!-- 오른쪽: 출고 상태 -->
             </Grid.ColumnDefinitions>
 
             <!-- ═ 출고차량 상태 ═ -->
@@ -529,104 +529,15 @@
                 </Grid>
             </Border>
 
-            <!-- ═ 블랙박스 + 통계 (Col1) ═ -->
+            <!-- ═ 통계 (Col1) ═ -->
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="1.2*"/>
-                    <!-- 블랙박스 -->
                     <RowDefinition Height="*"/>
                     <!-- 통계 그래프 -->
                 </Grid.RowDefinitions>
 
-                <!-- ═ 블랙박스 이벤트 ═ -->
-                <Border Grid.Row="0" Style="{StaticResource Card}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0" Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="▌ " Foreground="#FB923C" FontSize="14"/>
-                                <TextBlock Text="블랙박스 이벤트" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-                            </StackPanel>
-                            <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                        Command="{Binding ClearLogsCommand}" CommandParameter="blackbox"
-                        HorizontalAlignment="Right"/>
-                        </Grid>
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Text="필터: " FontSize="10" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
-                            <Border Background="{DynamicResource AccentBg}" CornerRadius="10" Padding="8,3" Margin="4,0">
-                                <TextBlock Text="전체" FontSize="10" Foreground="{DynamicResource FgSecondary}"/>
-                            </Border>
-                            <Border Background="#7C2D12" CornerRadius="10" Padding="8,3" Margin="4,0">
-                                <TextBlock Text="OCR실패" FontSize="10" Foreground="#FB923C"/>
-                            </Border>
-                            <Border Background="#7F1D1D" CornerRadius="10" Padding="8,3" Margin="4,0">
-                                <TextBlock Text="분류실패" FontSize="10" Foreground="#F87171"/>
-                            </Border>
-                            <Border Background="#1C3D5A" CornerRadius="10" Padding="8,3" Margin="4,0">
-                                <TextBlock Text="박스걸림" FontSize="10" Foreground="#38BDF8"/>
-                            </Border>
-                        </StackPanel>
-
-                        <DataGrid Grid.Row="2" ItemsSource="{Binding BlackboxEvents}" Style="{StaticResource DG}">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Severity}" Value="오류">
-                                            <Setter Property="Background" Value="#1A0000"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGrid.RowStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="시각"     Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm:ss}" Width="92"/>
-                                <DataGridTemplateColumn Header="유형" Width="68">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
-                                Background="{Binding EventType, Converter={StaticResource StatusToColor}}">
-                                                <TextBlock Text="{Binding EventType}" FontSize="10" Foreground="White"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="심각도" Width="48">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Severity}" FontSize="10" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Foreground="{Binding Severity, Converter={StaticResource SeverityToColor}}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="설명"   Binding="{Binding Description}"    Width="*"/>
-                                <DataGridTemplateColumn Header="이미지" Width="68">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Background="#0F2840" CornerRadius="3" Padding="4,2"
-                                HorizontalAlignment="Center" Cursor="Hand">
-                                                <TextBlock Text="🖼 보기" FontSize="10" Foreground="#38BDF8"
-                                     ToolTip="{Binding ImagePath}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Border>
-
                 <!-- ═ 통계 그래프 ═ -->
-                <Grid Grid.Row="1">
+                <Grid Grid.Row="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
@@ -847,7 +758,7 @@
             </Grid>
 
 
-            <!-- ═ 로그인 기록 ═ -->
+            <!-- ═ 출고 상태 로그 ═ -->
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -857,51 +768,32 @@
                     <Grid Grid.Row="0" Margin="0,0,0,8">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="▌ " Foreground="#A78BFA" FontSize="14"/>
-                            <TextBlock Text="로그인 기록" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                            <TextBlock Text="출고 상태 로그" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
                         </StackPanel>
                         <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                    Command="{Binding ClearLogsCommand}" CommandParameter="login"
+                    Command="{Binding ClearLogsCommand}" CommandParameter="shipping"
                     HorizontalAlignment="Right"/>
                     </Grid>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding LoginRecords}" Style="{StaticResource DG}">
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ShippingLogs}" Style="{StaticResource DG}">
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
                         </DataGrid.ColumnHeaderStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="시각"   Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm}" Width="75"/>
-                            <DataGridTextColumn Header="사용자" Binding="{Binding UserName}"                            Width="48"/>
-                            <DataGridTextColumn Header="권한"   Binding="{Binding Role}"                                Width="65"/>
-                            <DataGridTemplateColumn Header="구분" Width="50">
+                            <DataGridTextColumn Header="시각" Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm}" Width="75"/>
+                            <DataGridTextColumn Header="운송장" Binding="{Binding TrackingNumber}" Width="82"/>
+                            <DataGridTextColumn Header="권역" Binding="{Binding Region}" Width="40"/>
+                            <DataGridTextColumn Header="목적지" Binding="{Binding Destination}" Width="*"/>
+                            <DataGridTemplateColumn Header="상태" Width="62">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
-                            Background="{Binding Action, Converter={StaticResource StatusToColor}}">
-                                            <TextBlock Text="{Binding Action}" FontSize="10" Foreground="White"/>
+                            Background="{Binding Status, Converter={StaticResource StatusToColor}}">
+                                            <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="*"/>
-                            <DataGridTemplateColumn Header="결과" Width="36">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text"       Value="✓"/>
-                                                    <Setter Property="Foreground" Value="#4ADE80"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Success}" Value="False">
-                                                            <Setter Property="Text"       Value="✗"/>
-                                                            <Setter Property="Foreground" Value="#F87171"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="슬롯" Binding="{Binding SlotNumber, StringFormat=#{0}}" Width="36"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

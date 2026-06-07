@@ -27,12 +27,15 @@ namespace MasterAdmin
             _http = new HttpClient
             {
                 BaseAddress = new Uri(serverUrl.TrimEnd('/') + "/"),
-                Timeout = TimeSpan.FromSeconds(30)
+                // 이미지 포함 multipart 전송이 오래 걸려도 타임아웃 안 나게 넉넉히
+                Timeout = TimeSpan.FromSeconds(60)
             };
 
-            _socket = new SocketIO(serverUrl);
-
-
+            // Flask-SocketIO 5.x = Engine.IO v4 → EIO=4로 맞춤
+            _socket = new SocketIO(serverUrl, new SocketIOOptions { EIO = (SocketIOClient.EngineIO)4 });
+            // 기존 코드가 Newtonsoft JObject를 쓰므로 직렬화기를 Newtonsoft로 고정
+            _socket.JsonSerializer =
+                new SocketIOClient.Newtonsoft.Json.NewtonsoftJsonSerializer();
         }
 
         // ── REST: 초기 데이터 로딩 ────────────────────────────────────────
@@ -41,12 +44,18 @@ namespace MasterAdmin
         {
             await Task.WhenAll(
                 LoadStatusAsync(vm),
-                LoadSortLogsAsync(vm),
                 LoadShippingLogsAsync(vm),
                 LoadBlackboxEventsAsync(vm),
                 LoadLoginRecordsAsync(vm),
                 LoadCarStatusAsync(vm)
             );
+
+            // 분류이력은 순서가 중요하다: QR/OCR(성공·실패) 행을 먼저 채운 뒤
+            //   박스검수를 매칭해야 전체 탭 행에 택배상태·최종판정이 복원된다.
+            //   (동시 로드 시 HTTP가 1개뿐인 박스검수가 먼저 끝나 매칭 대상 QR/OCR 행이
+            //    아직 없어 전체 탭 복원이 누락되던 문제 — WPF 재시작 후 전체 탭 미반영.)
+            await LoadSortLogsAsync(vm);
+            await LoadBoxLogsAsync(vm);
         }
 
         private async Task LoadStatusAsync(MainViewModel vm)
@@ -99,15 +108,27 @@ namespace MasterAdmin
                 // 성공 로그 추가
                 foreach (var l in logs)
                 {
+                    l.MergeKey = "S" + l.Id;
                     mergedLogs.Add(l);
                 }
 
                 // 실패 로그 추가
                 foreach (var e in errorLogs)
                 {
+                    // 박스 외관 불량(paper_crack/paper_gap 등 YOLO 박스 클래스)이 OCR/QR 실패
+                    //   메시지로 들어온 행은 전체 탭의 박스 앵커 행과 중복 → 분류 이력에 띄우지 않음.
+                    var msg = e.Message ?? "";
+                    if (msg.IndexOf("paper_", StringComparison.OrdinalIgnoreCase) >= 0)
+                        continue;
+
                     mergedLogs.Add(new SortingLog
                     {
+                        MergeKey = "E" + e.Id,
                         Id = e.Id,
+
+                        // 실시간으로 이미 전체 탭 앵커에 병합된 인식실패 행과 같은 건인지
+                        //   매칭하기 위한 package_id (운송장이 비어 운송장 매칭이 불가하므로).
+                        PackageId = e.PackageId,
 
                         Timestamp = e.CreatedAt,
 
@@ -129,7 +150,8 @@ namespace MasterAdmin
 
                         Confidence = 0,
 
-                        ImagePath = e.ImagePath
+                        // 상대경로(/storage/qr_fail/..)면 절대 URL로 변환 → 미리보기 로드 가능
+                        ImagePath = ToAbsoluteImageUrl(e.ImagePath)
                     });
                 }
 
@@ -138,14 +160,56 @@ namespace MasterAdmin
                     .OrderByDescending(x => x.Timestamp)
                     .ToList();
 
-                // 화면 반영
+                // 화면 반영 — 증분 병합(Clear 금지)
+                //  · 로컬(WPF 생성) 행은 보존 → 떴다가 사라지는 현상 방지
+                //  · 이미 있는 DB 행은 건너뜀 → 전체 재생성 깜빡임 방지
+                //  · 신규 DB 행만 시간순 위치에 삽입
                 Dispatch(() =>
                 {
-                    vm.SortingLogs.Clear();
+                    var existingKeys = new HashSet<string>(
+                        vm.SortingLogs
+                          .Where(x => !x.IsLocal && x.MergeKey != null)
+                          .Select(x => x.MergeKey!));
 
                     foreach (var log in mergedLogs)
                     {
-                        vm.SortingLogs.Add(log);
+                        if (log.MergeKey != null && existingKeys.Contains(log.MergeKey))
+                        {
+                            // 이미 있는 행이라도, 라이브 직후 비어 있던 이미지가 서버에 늦게
+                            //   저장됐으면 폴링 때 채워준다(이미지가 페이지 재진입 전까지 안 뜨던 문제).
+                            var existing = vm.SortingLogs.FirstOrDefault(x => x.MergeKey == log.MergeKey);
+                            if (existing != null && string.IsNullOrEmpty(existing.ImagePath)
+                                && !string.IsNullOrEmpty(log.ImagePath))
+                                existing.ImagePath = log.ImagePath;
+                            continue;
+                        }
+
+                        // 인식실패(오류로그) 행이 이미 라이브 때 전체 탭 앵커에 병합돼 있으면
+                        //   (같은 package_id) → 새 'FAIL-..' 행을 또 넣지 않고 앵커가 흡수한다.
+                        //   앵커는 운송장 비움(불량)으로 유지하고, 폴링 키·이미지만 승계.
+                        if (log.MergeKey != null && log.MergeKey.StartsWith("E") && log.PackageId != 0)
+                        {
+                            var merged = vm.SortingLogs.FirstOrDefault(
+                                x => x.PackageId == log.PackageId && x.IsBoxAnchor);
+                            if (merged != null)
+                            {
+                                merged.MergeKey = log.MergeKey;   // 이후 폴링 중복방지
+                                if (string.IsNullOrEmpty(merged.ImagePath)
+                                    && !string.IsNullOrEmpty(log.ImagePath))
+                                    merged.ImagePath = log.ImagePath;
+                                existingKeys.Add(log.MergeKey);
+                                continue;
+                            }
+                        }
+
+                        int idx = 0;
+                        while (idx < vm.SortingLogs.Count &&
+                               vm.SortingLogs[idx].Timestamp > log.Timestamp)
+                            idx++;
+                        vm.SortingLogs.Insert(idx, log);
+
+                        if (log.MergeKey != null)
+                            existingKeys.Add(log.MergeKey);
                     }
                 });
             }
@@ -153,6 +217,136 @@ namespace MasterAdmin
             {
                 Log("LoadSortLogs", ex);
             }
+        }
+
+        // ── 택배상태(박스검수) 로그 로드 — box_inspections 조회 → BoxStatus·이미지 복원 ─
+        //   새로고침/재시작해도 택배상태가 유지되도록 폴링·초기로드 때 호출.
+        //   라이브 세션에 떠 있는 로컬 박스행은 흡수(중복 방지)한다.
+        public async Task LoadBoxLogsAsync(MainViewModel vm)
+        {
+            try
+            {
+                var json = await _http.GetStringAsync("api/logs/box");
+                var obj = JObject.Parse(json);
+                var boxLogs = obj["logs"]?.ToObject<List<BoxLog>>() ?? new();
+
+                Dispatch(() =>
+                {
+                    var existingKeys = new HashSet<string>(
+                        vm.SortingLogs
+                          .Where(x => x.MergeKey != null)
+                          .Select(x => x.MergeKey!));
+
+                    // 같은 운송장에 박스검수가 여러 건이면 최신 1건만 전체 탭에 반영한다.
+                    //   (조회가 created_at DESC라 먼저 만나는 게 최신. 옛 행으로 최종판정을
+                    //    덮어써 '정상'인데 과거 불량검수의 오류유형/이미지가 남던 문제 방지)
+                    var restoredInvoices = new HashSet<string>();
+
+                    foreach (var b in boxLogs)
+                    {
+                        string key = "B" + b.Id;
+                        string? img = ToAbsoluteImageUrl(
+                            !string.IsNullOrEmpty(b.ImageUrl) ? b.ImageUrl : b.ImagePath);
+
+                        // ── 전체 탭 복원: 같은 운송장의 QR/OCR 행 택배상태를 정상/불량으로 ──
+                        if (!string.IsNullOrEmpty(b.InvoiceNo) && restoredInvoices.Add(b.InvoiceNo))
+                        {
+                            var qrRow = vm.SortingLogs.FirstOrDefault(x =>
+                                x.TrackingNumber == b.InvoiceNo &&
+                                (x.RecognitionType == "QR" || x.RecognitionType == "OCR"));
+                            // 시간 근접 매칭: 같은 박스 패스의 검수만 적용한다. 운송장이 같아도
+                            //   시간이 멀리 떨어진(과거 테스트·재사용 QR) 박스검수는 무시 →
+                            //   정상 택배가 새로고침 때 옛 불량검수(paper_crack·이미지)로
+                            //   덮어써지던 오염 방지.
+                            if (qrRow != null
+                                && (b.CreatedAt - qrRow.Timestamp).Duration() <= TimeSpan.FromSeconds(90))
+                            {
+                                string qrFinal = ComputeFinalResult(qrRow.Status, b.BoxStatus);
+                                if (qrRow.BoxStatus != b.BoxStatus) qrRow.BoxStatus = b.BoxStatus;
+                                if (qrRow.FinalResult != qrFinal) qrRow.FinalResult = qrFinal;
+
+                                // 최종판정이 불량일 때만 오류유형·이미지 표시. 정상/비닐이면 둘 다 비운다.
+                                //   (정상인데 과거 불량검수의 paper_crack·이미지가 남던 문제 방지)
+                                if (qrFinal == "불량")
+                                {
+                                    if (!string.IsNullOrEmpty(b.DefectClass) && qrRow.ErrorType != b.DefectClass)
+                                        qrRow.ErrorType = b.DefectClass!;
+                                    if (string.IsNullOrEmpty(qrRow.ImagePath) && !string.IsNullOrEmpty(img))
+                                        qrRow.ImagePath = img;
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(qrRow.ErrorType)) qrRow.ErrorType = "";
+                                    if (!string.IsNullOrEmpty(qrRow.ImagePath)) qrRow.ImagePath = "";
+                                }
+                            }
+                        }
+
+                        // ── 택배상태 탭 복원: 박스 단독 로그 (전체에선 isBoxOnly로 숨겨짐) ──
+                        if (existingKeys.Contains(key)) continue;
+
+                        // 라이브 세션에서 떠 있는 로컬 박스 단독행 흡수(중복 방지)
+                        //   앵커 행(IsBoxAnchor)은 전체 탭 행이므로 흡수 대상에서 제외.
+                        var local = vm.SortingLogs.FirstOrDefault(x =>
+                            x.IsLocal && x.MergeKey == null && !x.IsBoxAnchor
+                            && string.IsNullOrEmpty(x.RecognitionType)
+                            && x.BoxStatus == b.BoxStatus
+                            && (b.CreatedAt - x.Timestamp).Duration() < TimeSpan.FromSeconds(20));
+                        if (local != null)
+                        {
+                            local.MergeKey = key;
+                            if (string.IsNullOrEmpty(local.ImagePath) && !string.IsNullOrEmpty(img))
+                                local.ImagePath = img;
+                            existingKeys.Add(key);
+                            continue;
+                        }
+
+                        var row = new SortingLog
+                        {
+                            MergeKey = key,
+                            Id = b.Id,
+                            Timestamp = b.CreatedAt,
+                            TrackingNumber = b.InvoiceNo ?? "",
+                            RecognitionType = "",
+                            Region = "",
+                            Status = "",
+                            BoxStatus = b.BoxStatus,
+                            FinalResult = b.BoxStatus,
+                            ErrorType = b.DefectClass ?? "",
+                            ProcessingTime = 0,
+                            Confidence = b.Confidence,
+                            ImagePath = img
+                        };
+
+                        int idx = 0;
+                        while (idx < vm.SortingLogs.Count &&
+                               vm.SortingLogs[idx].Timestamp > row.Timestamp)
+                            idx++;
+                        vm.SortingLogs.Insert(idx, row);
+                        existingKeys.Add(key);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log("LoadBoxLogs", ex);
+            }
+        }
+
+        // 교차검증 최종판정 (FieldPage.SetBoxResult와 동일 규칙):
+        //   QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량. 비닐은 그대로.
+        //   QR/OCR 정보가 없으면 박스 상태를 그대로 최종판정으로.
+        private static string ComputeFinalResult(string? ocrStatus, string boxStatus)
+        {
+            bool hasOcr = !string.IsNullOrEmpty(ocrStatus) && ocrStatus != "-" && ocrStatus != "비닐";
+            // 택배상태가 비닐이어도 QR/OCR 결과가 있으면 그걸로 최종판정.
+            //   QR/OCR 정상 → 정상, QR/OCR 불량 → 불량. QR/OCR 정보 없으면 비닐 그대로.
+            if (boxStatus == "비닐")
+                return hasOcr ? (ocrStatus == "정상" ? "정상" : "불량") : "비닐";
+            // 그 외: QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량. QR/OCR 없으면 박스 상태 그대로.
+            if (hasOcr)
+                return (ocrStatus == "정상" && boxStatus == "정상") ? "정상" : "불량";
+            return boxStatus;
         }
 
         private async Task LoadShippingLogsAsync(MainViewModel vm)
@@ -311,14 +505,16 @@ namespace MasterAdmin
 
         // ── REST: 비상정지 ────────────────────────────────────────────────
 
+        // 비상정지 발동 → Flask가 전체(로봇/컨베이어/AGV) 정지 + 앱 푸시 + WebSocket 알림 일괄 처리.
+        //   (기존: parcel/robot/command MQTT 직접 발행 → 로봇만 멈추고 Flask 미경유라 폐기)
         public async Task<bool> EmergencyStopAsync()
         {
             try
             {
-                string json = "{\"command\":\"EMERGENCY_STOP\"}";
-                var body = new StringContent(json, Encoding.UTF8, "application/json");
-                var res = await _http.PostAsync("api/conveyor/command", body);
+                var body = new StringContent("{\"source\":\"WPF\"}", Encoding.UTF8, "application/json");
+                var res = await _http.PostAsync("api/emergency/stop", body);
 
+                System.Diagnostics.Debug.WriteLine($"[HTTP] 비상정지 발동 → HTTP {(int)res.StatusCode}");
                 return res.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -328,14 +524,15 @@ namespace MasterAdmin
             }
         }
 
+        // 비상정지 해제 → Flask가 전체 재개 브로드캐스트.
         public async Task<bool> EmergencyResetAsync()
         {
             try
             {
-                string json = "{\"command\":\"CONVEYOR_START\",\"speed\":180}";
-                var body = new StringContent(json, Encoding.UTF8, "application/json");
-                var res = await _http.PostAsync("api/conveyor/command", body);
+                var body = new StringContent("{\"source\":\"WPF\"}", Encoding.UTF8, "application/json");
+                var res = await _http.PostAsync("api/emergency/reset", body);
 
+                System.Diagnostics.Debug.WriteLine($"[HTTP] 비상정지 해제 → HTTP {(int)res.StatusCode}");
                 return res.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -352,6 +549,7 @@ namespace MasterAdmin
             _socket.OnConnected += (sender, e) =>
             {
                 System.Diagnostics.Debug.WriteLine("[Flask] WebSocket 연결 성공!");
+                SockLog("[연결] WebSocket 연결 성공");
 
                 Dispatch(() =>
                 {
@@ -389,17 +587,31 @@ namespace MasterAdmin
                 {
                     var log = resp.GetValue<SortingLog>(0);
 
+                    // Flask가 함께 보낸 이미지 URL 추출 (필드명 변형 모두 허용)
+                    try
+                    {
+                        var raw = resp.GetValue<JObject>(0);
+                        SockLog("[sorting_log_added] payload=" + raw.ToString(Formatting.None));
+                        var url = ExtractImageUrl(raw);
+                        if (!string.IsNullOrEmpty(url)) log.ImagePath = url;
+                    }
+                    catch { }
+
                     Dispatch(() =>
                     {
-                        DebugWindow.Instance.AddLog("sorting_log_added", $"운송장:{log.TrackingNumber} 상태:{log.Status}");
+                        DebugWindow.Instance.AddLog("sorting_log_added",
+                            $"운송장:{log.TrackingNumber} 상태:{log.Status} 이미지:{log.ImagePath ?? "없음"}");
+
+                        if (log.Status == "불량")
+                            vm.TriggerRecording?.Invoke(log.ErrorType ?? "인식실패");
+
+                        // DB 새로고침 시 같은 행이 중복 추가되지 않도록 키 부여
+                        log.MergeKey = "S" + log.Id;
 
                         vm.SortingLogs.Insert(0, log);
 
                         if (vm.SortingLogs.Count > 60)
                             vm.SortingLogs.RemoveAt(vm.SortingLogs.Count - 1);
-
-                        if (log.Status == "불량")
-                            vm.TriggerRecording?.Invoke(log.ErrorType ?? "인식실패");
                     });
                 }
                 catch (Exception ex)
@@ -432,16 +644,59 @@ namespace MasterAdmin
 
             _socket.On("blackbox_event_added", resp =>
             {
+                System.Diagnostics.Debug.WriteLine("★★★ blackbox_event_added 수신됨 ★★★");
+                SockLog("[blackbox_event_added] ★ 수신됨 ★ payload=" + resp.ToString());
+                // 디버거 없이도 보이도록 앱 내 로그창에도 즉시 기록(수신 여부 확인용)
+                Dispatch(() => DebugWindow.Instance.AddLog(
+                    "blackbox_event_added", "★ 수신됨 ★ " + resp.ToString()));
                 try
                 {
-                    var ev = resp.GetValue<BlackboxEvent>(0);
+                    var raw = resp.GetValue<JObject>(0);
+
+                    // 이미지 URL 추출 (필드명 변형 모두 허용)
+                    string? fullImageUrl = ExtractImageUrl(raw);
+
+                    string? trackingNo = raw["tracking_number"]?.ToString()
+                                      ?? raw["invoice_no"]?.ToString();
+
+                    var ev = raw.ToObject<BlackboxEvent>() ?? new BlackboxEvent();
 
                     Dispatch(() =>
                     {
-                        DebugWindow.Instance.AddLog("blackbox_event_added", ev.Description ?? "");
+                        DebugWindow.Instance.AddLog("blackbox_event_added",
+                            $"{ev.Description ?? ""} | {trackingNo} | {fullImageUrl ?? "이미지없음"}");
 
+                        // ── 이미지 부착 (불량 행에만) ────────────────────────
+                        if (!string.IsNullOrEmpty(fullImageUrl))
+                        {
+                            SortingLog? target = null;
+
+                            // 1) 운송장번호로 매칭 (있으면)
+                            if (!string.IsNullOrEmpty(trackingNo))
+                                target = vm.SortingLogs.FirstOrDefault(
+                                    l => l.TrackingNumber == trackingNo && IsDefectRow(l));
+
+                            // 2) 운송장 없거나 못 찾으면 → 이미지 없는 가장 최근 불량 행
+                            //    (Vision/SCAN_FAILED는 운송장이 비어 매칭이 안 되므로)
+                            if (target == null)
+                                target = vm.SortingLogs.FirstOrDefault(
+                                    l => IsDefectRow(l) && string.IsNullOrEmpty(l.ImagePath));
+
+                            if (target != null)
+                            {
+                                target.ImagePath = fullImageUrl;
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[이미지] → {target.TrackingNumber}/{target.Status} : {fullImageUrl}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[이미지] 붙일 불량 행 없음 — {trackingNo}");
+                            }
+                        }
+
+                        // BlackboxEvents 목록에도 추가
                         vm.BlackboxEvents.Insert(0, ev);
-
                         if (vm.BlackboxEvents.Count > 100)
                             vm.BlackboxEvents.RemoveAt(vm.BlackboxEvents.Count - 1);
                     });
@@ -546,7 +801,101 @@ namespace MasterAdmin
                 }
             });
 
-            _ = _socket.ConnectAsync();
+            // ── defect_inspected: Flask가 YOLO 검사 완료 후 결과+이미지 전달 ──
+            // Flask가 QR/OCR 캠 이미지를 저장하고 URL을 여기로 보내줌
+            _socket.On("defect_inspected", resp =>
+            {
+                try
+                {
+                    var d = resp.GetValue<JObject>(0);
+                    SockLog("[defect_inspected] payload=" + d.ToString(Formatting.None));
+
+                    string? trackingNo = d["tracking_number"]?.ToString()
+                                       ?? d["invoice_no"]?.ToString();
+                    string? yoloResult = d["yolo_result"]?.ToString();    // "정상" | "불량"
+                    string? defectClass = d["defect_class"]?.ToString();
+
+                    // 이미지 URL 추출 (필드명 변형 모두 허용)
+                    string? fullImageUrl = ExtractImageUrl(d);
+
+                    Dispatch(() =>
+                    {
+                        DebugWindow.Instance.AddLog("defect_inspected",
+                            $"운송장:{trackingNo} | 결과:{yoloResult} | 불량:{defectClass} | 이미지:{fullImageUrl ?? "없음"}");
+
+                        if (string.IsNullOrEmpty(trackingNo)) return;
+
+                        // SortingLog에서 해당 운송장번호 행 찾아서 업데이트
+                        var target = vm.SortingLogs
+                            .FirstOrDefault(l => l.TrackingNumber == trackingNo);
+
+                        if (target != null)
+                        {
+                            // Flask 판정 결과로 BoxStatus/FinalResult 갱신
+                            if (!string.IsNullOrEmpty(yoloResult))
+                            {
+                                target.BoxStatus = yoloResult;
+                                target.FinalResult = yoloResult;
+                            }
+                            // 최종판정이 불량일 때만 오류유형·이미지 표시. 정상이면 둘 다 비운다.
+                            //   (정상인데 과거 불량검수의 오류유형/이미지가 남던 문제 방지)
+                            bool isDefect = yoloResult == "불량" || IsDefectRow(target);
+                            if (isDefect)
+                            {
+                                if (!string.IsNullOrEmpty(defectClass))
+                                    target.ErrorType = defectClass;
+                                if (!string.IsNullOrEmpty(fullImageUrl))
+                                {
+                                    target.ImagePath = fullImageUrl;
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[defect_inspected] 이미지 저장 → {trackingNo} : {fullImageUrl}");
+                                }
+                            }
+                            else
+                            {
+                                // 정상 → 오류유형·이미지 모두 비움
+                                target.ErrorType = "";
+                                target.ImagePath = "";
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[defect_inspected] SortingLog 없음 → {trackingNo}");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Log("defect_inspected", ex);
+                }
+            });
+
+            // 소켓 에러 로깅 (핸드셰이크/프로토콜 실패 등을 드러냄)
+            _socket.OnError += (sender, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[Flask] WebSocket 오류: {e}");
+                SockLog($"[오류] {e}");
+            };
+
+            SockLog($"[시작] ConnectAsync 시도 → {_http.BaseAddress}  (EIO4)");
+
+            // 연결을 fire-and-forget 하지 말고 실패를 로그로 드러냄
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    await _socket.ConnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    SockLog($"[연결실패] {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[Flask] WebSocket 연결 실패: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine(
+                        "  → SocketIOClient(2.0.2.5, EIO3) ↔ Flask-SocketIO 버전 불일치 가능성. " +
+                        "Flask가 python-socketio 5.x(EIO4)면 클라이언트 업그레이드 필요.");
+                }
+            });
 
             StartStatusPolling(vm);
         }
@@ -981,6 +1330,43 @@ namespace MasterAdmin
             return TryGetBool(d, out bool value, keys) ? value : defaultValue;
         }
 
+        // 불량 행 판별 — 정상 행에는 이미지를 붙이지 않기 위함
+        private static bool IsDefectRow(SortingLog l)
+            => l.Status == "불량" || l.BoxStatus == "불량" || l.FinalResult == "불량";
+
+        // 상대 경로(/storage/..) → 절대 URL. 이미 http면 그대로. 빈 값이면 null.
+        private static string? ToAbsoluteImageUrl(string? p)
+        {
+            if (string.IsNullOrEmpty(p)) return null;
+            return p.StartsWith("http")
+                ? p
+                : "http://192.168.0.21:5000" + (p.StartsWith("/") ? "" : "/") + p;
+        }
+
+        // 이벤트에서 이미지 URL 추출 (필드명 변형 모두 허용) → 절대 URL
+        private static string? ExtractImageUrl(JObject raw)
+        {
+            string? p = raw["imageUrl"]?.ToString()
+                     ?? raw["image_url"]?.ToString()
+                     ?? raw["imagePath"]?.ToString()
+                     ?? raw["image_path"]?.ToString();
+            return ToAbsoluteImageUrl(p);
+        }
+
+        // ── 소켓 진단 로그 → 파일(socket_debug.log)에 기록 (읽어서 판정용) ─
+        private static readonly string SockLogPath =
+            System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "socket_debug.log");
+        private static void SockLog(string msg)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(SockLogPath,
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {msg}{Environment.NewLine}");
+            }
+            catch { }
+        }
+
+
         private static readonly JsonSerializerSettings _jsonSettings = new()
         {
             MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -995,6 +1381,129 @@ namespace MasterAdmin
 
         private static void Log(string tag, Exception ex)
             => Console.WriteLine($"[ApiService:{tag}] {ex.Message}");
+
+
+        // ── YOLO 결과 → Flask POST /api/yolo_result (불량이면 cam1/cam2 이미지 첨부) ─
+        public async Task<bool> PostYoloResultAsync(
+            string trackingNumber,
+            bool hasDefect,
+            string defectClass,
+            double confidence,
+            byte[]? imageBytes = null)
+        {
+            HttpContent? content = null;
+            try
+            {
+                var payload = new
+                {
+                    yolo_result = hasDefect ? "불량" : "정상",
+                    has_defect = hasDefect,
+                    defect_class = defectClass,
+                    confidence = Math.Round(confidence, 3),
+                    timestamp = DateTime.Now.ToString("o"),
+                    tracking_number = trackingNumber ?? "",
+                    source = "WPF",
+                };
+                var json = JsonConvert.SerializeObject(payload);
+
+                bool hasImg = hasDefect && imageBytes != null && imageBytes.Length > 0;
+
+                if (hasImg)
+                {
+                    // 불량 → multipart/form-data:  data(JSON) + image(JPEG)
+                    var form = new MultipartFormDataContent();
+                    form.Add(new StringContent(json, System.Text.Encoding.UTF8), "data");
+
+                    var imageContent = new ByteArrayContent(imageBytes!);
+                    imageContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                    form.Add(imageContent, "image", $"defect_{trackingNumber}.jpg");
+                    content = form;
+                }
+                else
+                {
+                    // 정상 → JSON만
+                    content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                }
+
+                var res = await _http.PostAsync("api/yolo_result", content);
+
+                System.Diagnostics.Debug.WriteLine(res.IsSuccessStatusCode
+                    ? $"[HTTP] YOLO결과 전송 완료 → {trackingNumber} | {(hasDefect ? "불량" : "정상")} | 이미지:{(hasImg ? "O" : "X")} | HTTP {(int)res.StatusCode}"
+                    : $"[HTTP] YOLO결과 전송 실패 → HTTP {(int)res.StatusCode}");
+
+                return res.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException)
+            {
+                System.Diagnostics.Debug.WriteLine("[HTTP] Flask /api/yolo_result 연결 실패 — 전송 생략");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[HTTP] YOLO결과 전송 오류: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                content?.Dispose();
+            }
+        }
+
+        // ── YOLO 불량 감지 → Flask /api/defect_notify POST (이미지 첨부) ─
+        public async Task NotifyDefectAsync(string camId, DefectResult result, byte[]? imageBytes = null)
+        {
+            HttpContent? content = null;
+            try
+            {
+                var detections = result.Detections.Select(d => new
+                {
+                    @class = d.Class,
+                    confidence = Math.Round(d.Confidence, 3),
+                }).ToList();
+
+                var payload = new
+                {
+                    camera = camId,
+                    timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    count = result.Count,
+                    detections = detections,
+                };
+
+                var json = JsonConvert.SerializeObject(payload);
+
+                bool hasImg = imageBytes != null && imageBytes.Length > 0;
+                if (hasImg)
+                {
+                    // multipart/form-data:  data(JSON) + image(JPEG)
+                    var form = new MultipartFormDataContent();
+                    form.Add(new StringContent(json, System.Text.Encoding.UTF8), "data");
+                    var imageContent = new ByteArrayContent(imageBytes!);
+                    imageContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                    form.Add(imageContent, "image", $"defect_{camId}_{DateTime.Now:yyyyMMdd_HHmmss}.jpg");
+                    content = form;
+                }
+                else
+                {
+                    content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                }
+
+                var res = await _http.PostAsync("api/defect_notify", content);
+
+                System.Diagnostics.Debug.WriteLine(res.IsSuccessStatusCode
+                    ? $"[Flask] 불량 신호 전송 완료 → {camId} | 이미지:{(hasImg ? "O" : "X")} | {string.Join(", ", detections.Select(d => d.@class))}"
+                    : $"[Flask] 불량 신호 전송 실패 → HTTP {(int)res.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Flask] 불량 신호 전송 오류: {ex.Message}");
+            }
+            finally
+            {
+                content?.Dispose();
+            }
+        }
 
         public async Task DisconnectAsync()
         {

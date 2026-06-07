@@ -155,11 +155,17 @@ namespace MasterAdmin
 
         public Action<string>? TriggerRecording { get; set; }
 
+        // ★ FieldPage가 설정 — ApiService가 불량 감지 시 cam2 프레임 요청
+        public Func<byte[]?>? GetShippingFrame { get; set; }
+        public Func<byte[]?>? GetQrFrame { get; set; }   // QR/OCR 캠 프레임
+        public Func<byte[]?>? GetFieldFrame { get; set; } // cam1 현장캠 프레임
+
         public ObservableCollection<SortingLog> SortingLogs { get; } = new();
         public ObservableCollection<ShippingLog> ShippingLogs { get; } = new();
         public ObservableCollection<BlackboxEvent> BlackboxEvents { get; } = new();
         public ObservableCollection<LoginRecord> LoginRecords { get; } = new();
         public ObservableCollection<CarStatus> Cars { get; } = new();
+        public ObservableCollection<BoxInspectionLog> BoxInspectionLogs { get; } = new();
 
         public ICommand NavigateToFieldCommand { get; }
         public ICommand NavigateToOverviewCommand { get; }
@@ -250,6 +256,10 @@ namespace MasterAdmin
                         BlackboxEvents.Clear();
                         break;
 
+                    case "boxdamage":
+                        BoxInspectionLogs.Clear();
+                        break;
+
                     case "login":
                         LoginRecords.Clear();
                         break;
@@ -304,6 +314,7 @@ namespace MasterAdmin
                 if (_tick % 3 == 0)
                 {
                     await _api.LoadSortLogsAsync(this);
+                    await _api.LoadBoxLogsAsync(this);   // 택배상태(박스검수) 복원
                 }
 
                 // 2초마다 자동차 상태 새로고침
@@ -403,6 +414,8 @@ namespace MasterAdmin
             {
                 System.Diagnostics.Debug.WriteLine("[ROBOT MQTT] " + topic + " / " + data.ToString(Formatting.None));
             };
+
+            // ※ 박스 검수 결과는 HTTP(POST /api/yolo_result)만 사용 — MQTT 수신 경로 제거됨
 
             _mqtt.LogReceived += msg =>
             {
@@ -624,32 +637,32 @@ namespace MasterAdmin
 
         private async Task RobotEmergencyStopAsync()
         {
-            await EnsureRobotMqttConnectedAsync();
-
             IsEmergencyStop = true;
             DeviceStatus.RobotArmStatus = "비상정지";
-            RobotLastMessage = "로봇 비상정지 명령 전송";
+            RobotLastMessage = "비상정지 명령 전송 (Flask)";
             RefreshDeviceStatus();
 
-            bool ok = await _mqtt.RobotEmergencyStopAsync();
+            // 비상정지는 Flask HTTP로만 전송 → Flask가 parcel/system/emergency로
+            //   로봇·컨베이어·AGV 전체 정지 + 모바일 앱 FCM/WebSocket 알림까지 브로드캐스트.
+            //   (parcel/robot/command MQTT 직접 발행은 로봇만 멈추고 중복이라 제거)
+            bool ok = await _api.EmergencyStopAsync();
 
             if (!ok)
-                SetRobotCommandFail("로봇 비상정지 명령 실패");
+                SetRobotCommandFail("비상정지 명령 실패");
         }
 
         private async Task RobotResetEmergencyAsync()
         {
-            await EnsureRobotMqttConnectedAsync();
-
             IsEmergencyStop = false;
             DeviceStatus.RobotArmStatus = "재개중";
-            RobotLastMessage = "로봇 비상정지 해제 명령 전송";
+            RobotLastMessage = "비상정지 해제 명령 전송 (Flask)";
             RefreshDeviceStatus();
 
-            bool ok = await _mqtt.RobotResetEmergencyAsync();
+            // 해제도 Flask HTTP로만 → Flask가 parcel/system/emergency로 전체 재개 브로드캐스트.
+            bool ok = await _api.EmergencyResetAsync();
 
             if (!ok)
-                SetRobotCommandFail("로봇 비상정지 해제 실패");
+                SetRobotCommandFail("비상정지 해제 명령 실패");
         }
 
         private async Task RobotCameraStatusAsync()
@@ -766,15 +779,9 @@ namespace MasterAdmin
                 DeviceStatus.RobotArmStatus = "재개중";
                 RefreshDeviceStatus();
 
+                // 해제는 Flask로만 전송 → Flask가 parcel/system/emergency로 로봇 포함 전체 재개 브로드캐스트.
+                //   (parcel/robot/command MQTT 직접 발행은 중복이라 제거)
                 await _api.EmergencyResetAsync();
-
-                try
-                {
-                    await RobotResetEmergencyAsync();
-                }
-                catch
-                {
-                }
 
                 await _api.RefreshStatusAsync(this);
             }
@@ -787,15 +794,9 @@ namespace MasterAdmin
                 DeviceStatus.RobotArmStatus = "비상정지";
                 RefreshDeviceStatus();
 
+                // 발동은 Flask로만 전송 → Flask가 전체(로봇/컨베이어/AGV) 정지 + 앱 푸시 + WebSocket 알림.
+                //   (parcel/robot/command MQTT 직접 발행은 로봇만 멈추고 중복이라 제거)
                 await _api.EmergencyStopAsync();
-
-                try
-                {
-                    await RobotEmergencyStopAsync();
-                }
-                catch
-                {
-                }
 
                 await _api.RefreshStatusAsync(this);
             }
@@ -1006,6 +1007,32 @@ namespace MasterAdmin
 
             app.Dispatcher.Invoke(action);
         }
+
+
+        // ── YOLO 불량 감지 신호를 Flask로 전달 (해당 캠 이미지 첨부) ──────
+        public async Task NotifyDefectToFlaskAsync(string camId, DefectResult result)
+        {
+            byte[]? image = camId == "field"
+                ? GetFieldFrame?.Invoke()
+                : GetShippingFrame?.Invoke();
+            await _api.NotifyDefectAsync(camId, result, image);
+        }
+
+        // ── 분류 이력 로그 수동 새로고침 (서버에서 sort/box/shipping/error/login 다시 로드) ─
+        //   LoadInitialDataAsync는 QR/OCR→박스검수 순으로 로드해 전체 탭 택배상태·최종판정까지 복원.
+        public Task RefreshLogsAsync() => _api.LoadInitialDataAsync(this);
+
+        // ── 박스 YOLO 결과를 Flask에 HTTP POST로 전달 ──────────────────
+        public async Task PostYoloResultAsync(
+            string trackingNumber, bool hasDefect, string defectClass, double confidence,
+            byte[]? imageBytes = null)
+        {
+            // 불량이면 검출 순간에 잡아둔 프레임(imageBytes)을 multipart 'image'로 전송.
+            //   이탈 시점의 라이브 프레임은 박스가 빠져나가 비어 있으므로 그쪽으로 폴백하지 않는다.
+            byte[]? image = hasDefect ? imageBytes : null;
+            await _api.PostYoloResultAsync(trackingNumber, hasDefect, defectClass, confidence, image);
+        }
+
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

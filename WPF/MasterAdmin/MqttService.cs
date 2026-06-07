@@ -232,15 +232,9 @@ namespace MasterAdmin
             return SendRobotCommandAsync("STOP");
         }
 
-        public Task<bool> RobotEmergencyStopAsync()
-        {
-            return SendRobotCommandAsync("EMERGENCY_STOP");
-        }
-
-        public Task<bool> RobotResetEmergencyAsync()
-        {
-            return SendRobotCommandAsync("RESET_EMERGENCY");
-        }
+        // 비상정지/해제 MQTT 직접 발행(EMERGENCY_STOP / RESET_EMERGENCY) 제거됨.
+        //   이제 WPF는 Flask HTTP(/api/emergency/stop·reset)로만 보내고,
+        //   Flask가 parcel/system/emergency로 로봇 포함 전체 장비에 브로드캐스트한다.
 
         public Task<bool> RobotOpenGripperAsync()
         {

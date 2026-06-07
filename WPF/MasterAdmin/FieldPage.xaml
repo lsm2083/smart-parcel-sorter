@@ -73,6 +73,31 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- DatePicker 내부 텍스트박스: 선택한 날짜가 흰 배경에 흰 글씨로 묻혀 안 보이는 문제 해결 -->
+        <Style TargetType="DatePickerTextBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePickerTextBox">
+                        <Grid>
+                            <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="3">
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="4,0" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock x:Name="PART_Watermark" Text="날짜 선택" Foreground="#64748B"
+                                       Margin="6,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                       Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="PART_Watermark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -273,7 +298,11 @@
                         </StackPanel>
                         <Grid Grid.Row="1">
                             <Border Background="#050E1A" CornerRadius="6" ClipToBounds="True">
-                                <Grid>
+                                <Grid x:Name="FieldCamGrid"
+                                      MouseDown="FieldCam_MouseDown"
+                                      MouseMove="FieldCam_MouseMove"
+                                      MouseUp="FieldCam_MouseUp"
+                                      Cursor="Cross">
                                     <Image x:Name="CamFieldImg" Stretch="UniformToFill"/>
                                     <StackPanel x:Name="CamFieldPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
                                         <TextBlock Text="📷" FontSize="26" HorizontalAlignment="Center"/>
@@ -282,6 +311,18 @@
                                         <TextBlock Text="연결 대기" FontSize="9" Foreground="#475569"
                                HorizontalAlignment="Center" Margin="0,3,0,0"/>
                                     </StackPanel>
+                                    <Canvas IsHitTestVisible="False">
+                                        <Rectangle x:Name="FieldDrawingRect"
+                                                   Stroke="#FF0000" StrokeThickness="2"
+                                                   Fill="Transparent" Visibility="Collapsed"/>
+                                    </Canvas>
+                                    <Border Background="#CC000000" CornerRadius="4"
+                                            Padding="6,4" Margin="4"
+                                            VerticalAlignment="Bottom" HorizontalAlignment="Left">
+                                        <TextBlock x:Name="FieldRoiGuideText"
+                                                   Text="🖱 드래그: 현장 ROI 설정"
+                                                   Foreground="White" FontSize="9" FontFamily="Consolas"/>
+                                    </Border>
                                 </Grid>
                             </Border>
                             <Border CornerRadius="4" Padding="4,2" Margin="5,5,0,0"
@@ -316,7 +357,11 @@
                         </StackPanel>
                         <Grid Grid.Row="1">
                             <Border Background="#050E1A" CornerRadius="6" ClipToBounds="True">
-                                <Grid>
+                                <Grid x:Name="ShippingCamGrid"
+                                      MouseDown="ShippingCam_MouseDown"
+                                      MouseMove="ShippingCam_MouseMove"
+                                      MouseUp="ShippingCam_MouseUp"
+                                      Cursor="Cross">
                                     <Image x:Name="CamShippingImg" Stretch="UniformToFill"/>
                                     <StackPanel x:Name="CamShippingPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
                                         <TextBlock Text="📷" FontSize="26" HorizontalAlignment="Center"/>
@@ -325,6 +370,42 @@
                                         <TextBlock Text="연결 대기" FontSize="9" Foreground="#475569"
                                HorizontalAlignment="Center" Margin="0,3,0,0"/>
                                     </StackPanel>
+                                    <Canvas x:Name="RoiCanvas" IsHitTestVisible="False">
+                                        <!-- ROI1: 감시 구역 고정 테두리 (빨간 점선) -->
+                                        <Rectangle x:Name="Roi1Rect"
+                                                   Stroke="#FF0000" StrokeThickness="2"
+                                                   StrokeDashArray="4,2" Fill="#22FF0000"
+                                                   Visibility="Collapsed"/>
+                                        <TextBlock x:Name="Roi1Label" Text="ROI1 박스감지"
+                                                   Foreground="#FF0000" FontSize="10" FontWeight="Bold"
+                                                   Visibility="Collapsed"/>
+                                        <!-- BoxDetect: 박스 진입 감지 (초록 실선) — OpenCV 컨투어 -->
+                                        <Rectangle x:Name="BoxDetectRect"
+                                                   Stroke="#00FF00" StrokeThickness="2"
+                                                   Fill="#1100FF00"
+                                                   Visibility="Collapsed"/>
+                                        <TextBlock x:Name="BoxDetectLabel"
+                                                   Foreground="#00FF00" FontSize="10" FontWeight="Bold"
+                                                   Visibility="Collapsed"/>
+                                        <!-- ROI2: 불량 검출 bbox (빨간 실선) — YOLO -->
+                                        <Rectangle x:Name="Roi2Rect"
+                                                   Stroke="#FF3232" StrokeThickness="2"
+                                                   Fill="#44FF0000"
+                                                   Visibility="Collapsed"/>
+                                        <TextBlock x:Name="Roi2Label" Text="ROI2 불량검출"
+                                                   Foreground="#FF3232" FontSize="10" FontWeight="Bold"
+                                                   Visibility="Collapsed"/>
+                                        <Rectangle x:Name="DrawingRect"
+                                                   Stroke="#FFFF00" StrokeThickness="1"
+                                                   Fill="Transparent" Visibility="Collapsed"/>
+                                    </Canvas>
+                                    <Border Background="#CC000000" CornerRadius="4"
+                                            Padding="6,4" Margin="4"
+                                            VerticalAlignment="Bottom" HorizontalAlignment="Left">
+                                        <TextBlock x:Name="RoiGuideText"
+                                                   Text="🖱 드래그: ROI1(박스) 설정"
+                                                   Foreground="White" FontSize="9" FontFamily="Consolas"/>
+                                    </Border>
                                 </Grid>
                             </Border>
                             <Border CornerRadius="4" Padding="4,2" Margin="5,5,0,0"
@@ -566,9 +647,16 @@
                                 <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
                                 <TextBlock Text="분류 이력 로그" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
                             </StackPanel>
-                            <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                      Command="{Binding ClearLogsCommand}" CommandParameter="sorting"
-                      HorizontalAlignment="Right"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="BtnRefreshLogs" Style="{StaticResource SmallBtn}" Content="🔄 새로고침"
+                                    Click="BtnRefreshLogs_Click" Margin="0,0,4,0"/>
+                                <DatePicker x:Name="LogDatePicker" Width="120" FontSize="10"
+                                    SelectedDateChanged="LogDatePicker_SelectedDateChanged"
+                                    Background="#0F172A" Foreground="White" BorderBrush="#334155"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="전체날짜" Click="BtnShowAllDates_Click" Margin="4,0,4,0"/>
+                                <Button Style="{StaticResource SmallBtn}" Content="초기화"
+                          Command="{Binding ClearLogsCommand}" CommandParameter="sorting"/>
+                            </StackPanel>
                         </Grid>
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                             <Button x:Name="BtnSortAll" Content="전체" Click="BtnSortFilter_Click" Tag="전체"
@@ -604,9 +692,9 @@
                                     </ControlTemplate>
                                 </Button.Template>
                             </Button>
-                            <Button x:Name="BtnSortJam" Content="박스 걸림" Click="BtnSortFilter_Click" Tag="박스걸림"
+                            <Button x:Name="BtnSortBox" Content="택배 상태" Click="BtnSortFilter_Click" Tag="택배상태"
                       Padding="8,3" FontSize="10" Cursor="Hand" BorderThickness="0"
-                      Background="#78350F" Foreground="#FDE68A">
+                      Background="#5B21B6" Foreground="#DDD6FE">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
@@ -621,7 +709,7 @@
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="시각" Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="58"/>
+                                <DataGridTextColumn Header="날짜/시각" Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm:ss}" Width="85"/>
                                 <DataGridTextColumn Header="운송장" Binding="{Binding TrackingNumber}" Width="82"/>
                                 <DataGridTextColumn Header="인식" Binding="{Binding RecognitionType}" Width="36"/>
                                 <DataGridTextColumn Header="권역" Binding="{Binding Region}" Width="40"/>
@@ -634,24 +722,32 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="택배상태" Width="55">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center" Background="{Binding BoxStatus, Converter={StaticResource StatusToColor}}">
+                                                <TextBlock Text="{Binding BoxStatus}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="최종판정" Width="55">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center" Background="{Binding FinalResult, Converter={StaticResource StatusToColor}}">
+                                                <TextBlock Text="{Binding FinalResult}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="오류유형" Binding="{Binding ErrorType}" Width="*"/>
                                 <DataGridTemplateColumn Header="이미지" Width="55">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="🖼 보기" FontSize="10" Foreground="#38BDF8" Background="#0F2840" BorderThickness="0" Cursor="Hand" Padding="4,2" Tag="{Binding ImagePath}" Click="BtnViewImage_Click">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding ImagePath}" Value="">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Button.Style>
+                                            <Button Content="🖼 보기" FontSize="10" Foreground="#38BDF8" Background="#0F2840" BorderThickness="0" Cursor="Hand" Padding="4,2"
+                                                    Tag="{Binding ImagePath}"
+                                                    Click="BtnViewImage_Click"
+                                                    Visibility="{Binding ImagePath, Converter={StaticResource HasValueToVis}}">
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
@@ -668,67 +764,30 @@
                     </Grid>
                 </Border>
 
+                <!-- ═ 이미지 미리보기 (분류이력 로그에서 이미지 클릭 시 표시) ═ -->
                 <Border Grid.Column="1" Style="{StaticResource Card}">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="▌ " Foreground="#C084FC" FontSize="14"/>
-                                <TextBlock Text="출고 상태 로그" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                                <TextBlock Text="이미지 미리보기" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
                             </StackPanel>
-                            <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                      Command="{Binding ClearLogsCommand}" CommandParameter="shipping"
-                      HorizontalAlignment="Right"/>
+                            <Button x:Name="BtnClearPreview" Style="{StaticResource SmallBtn}" Content="닫기" Click="BtnClearPreview_Click" HorizontalAlignment="Right"/>
                         </Grid>
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                            <Button x:Name="BtnShipAll" Content="전체" Click="BtnShipFilter_Click" Tag="전체"
-                      Margin="0,0,4,0" Padding="8,3" FontSize="10" Cursor="Hand" BorderThickness="0"
-                      Background="#4C1D95" Foreground="#DDD6FE">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>
-                            <Button x:Name="BtnShipFail" Content="로봇팔 분류 실패" Click="BtnShipFilter_Click" Tag="분류실패"
-                      Padding="8,3" FontSize="10" Cursor="Hand" BorderThickness="0"
-                      Background="#991B1B" Foreground="#FECACA">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>
-                        </StackPanel>
-                        <DataGrid x:Name="ShippingGrid" Grid.Row="2" ItemsSource="{Binding ShippingLogs}" Style="{StaticResource DG}">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="시각" Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="58"/>
-                                <DataGridTextColumn Header="운송장" Binding="{Binding TrackingNumber}" Width="82"/>
-                                <DataGridTextColumn Header="권역" Binding="{Binding Region}" Width="40"/>
-                                <DataGridTextColumn Header="목적지" Binding="{Binding Destination}" Width="*"/>
-                                <DataGridTemplateColumn Header="상태" Width="62">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center" Background="{Binding Status, Converter={StaticResource StatusToColor}}">
-                                                <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="슬롯" Binding="{Binding SlotNumber, StringFormat=#{0}}" Width="36"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <Grid Grid.Row="1">
+                            <!-- 이미지 미리보기 -->
+                            <Image x:Name="PreviewImage" Stretch="Uniform" Visibility="Collapsed"/>
+                            <!-- 플레이스홀더 -->
+                            <StackPanel x:Name="PreviewPlaceholder" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="🖼" FontSize="40" HorizontalAlignment="Center" Opacity="0.3"/>
+                                <TextBlock Text="분류이력 로그에서" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                                <TextBlock Text="이미지를 클릭하세요" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>

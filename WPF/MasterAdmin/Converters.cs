@@ -42,14 +42,17 @@ namespace MasterAdmin
                 "비상정지" or "비상정지 활성" or "EMERGENCY" or "EMERGENCY_STOP"
                     => new SolidColorBrush(Color.FromRgb(220, 38, 38)),
 
-                "대기" or "출고대기" or "처리중" or "연결전" or "연결중" or "정지중" or "정지중..." or "재개중" or "재개중..." or "초기화중"
+                "대기" or "대기중" or "출고대기" or "처리중" or "연결전" or "연결중" or "정지중" or "정지중..." or "재개중" or "재개중..." or "초기화중"
                     => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
 
                 "출발중" or "출고중" or "이동중" or "시작중..." or "HOME 이동중" or "집기중" or "분류중" or "정렬중" or "복귀중" or "작업중"
                     => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
 
-                "박스걸림" or "경고"
+                "박스훼손" or "경고"
                     => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
+
+                "비닐"
+                    => new SolidColorBrush(Color.FromRgb(168, 85, 247)),
 
                 _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
             };
@@ -184,6 +187,16 @@ namespace MasterAdmin
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => string.IsNullOrEmpty(value?.ToString()) ? Visibility.Visible : Visibility.Collapsed;
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    // ImagePath가 null/빈 문자열이면 Collapsed, 값 있으면 Visible
+    public class HasValueToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => string.IsNullOrEmpty(value?.ToString()) ? Visibility.Collapsed : Visibility.Visible;
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
