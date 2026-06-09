@@ -23,6 +23,11 @@ namespace MasterAdmin
         public Action<Mat>? OnDisplayFrame { get; set; }
         public bool IsRunning { get; private set; }
 
+        // 좌우반전 강제 옵션. USB 직접연결은 항상 반전(셀카처럼 미러)했는데, 스트림으로
+        //   입력을 바꿔도 화면·ROI·오버레이가 종전과 동일하도록 현장/출고 스트림엔 이 값을
+        //   true로 줘 같은 반전을 유지한다. (QR캠 등 다른 스트림은 기본 false → 영향 없음)
+        public bool FlipHorizontally { get; set; }
+
         // ── 최신 프레임 JPEG 저장 (불량 감지 시 이미지 전송용) ────────────
         private byte[]? _latestJpeg;
         private readonly object _jpegLock = new();
@@ -103,7 +108,8 @@ namespace MasterAdmin
                 cap.Grab();
                 if (!cap.Retrieve(frame) || frame.Empty()) continue;
 
-                if (_streamUrl == null)
+                // USB 직접연결(_streamUrl==null)은 항상 반전. 스트림은 FlipHorizontally일 때만 반전.
+                if (_streamUrl == null || FlipHorizontally)
                     Cv2.Flip(frame, flipped, FlipMode.Y);
                 else
                     frame.CopyTo(flipped);

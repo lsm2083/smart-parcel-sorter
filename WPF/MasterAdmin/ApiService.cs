@@ -22,6 +22,19 @@ namespace MasterAdmin
         private bool _statusPollingStarted = false;
         private bool _statusPollingBusy = false;
 
+        // 전체 탭 분류이력 복원 시 '최근' 행만 올린다. 폴링/초기로드가 DB 지난 100건을
+        //   통째로 끌어와 새벽(예: 05시)의 옛 QR/OCR 행이 오후 테스트 화면에 끼어들던 문제 방지.
+        //   (재시작 후 복원은 이 창 안의 최근 행으로 유지됨. 더 옛 이력은 날짜필터로만 본다.)
+        //   값이 짧으면 휴식 후 재시작 시 직전 세션 행을 일부 잃을 수 있으니 넉넉히 둔다.
+        private static readonly TimeSpan SortLogRestoreWindow = TimeSpan.FromHours(6);
+
+        // 같은 박스 한 행으로 합치기: 같은 운송장 행이 연속 간격(SameBoxWindow) 이내로
+        //   이어지면 동일 박스로 보고 한 행으로 합친다(다중 QR/OCR 스캔 + 정상→불량 박스검수
+        //   분리로 한 박스가 여러 행이 되던 문제). 최종판정은 '불량 우선'(최종 ROI 반영).
+        //   합치며 흡수한 DB행 키는 _absorbedKeys에 담아 폴링이 다시 끌어오지 못하게 막는다.
+        private static readonly TimeSpan SameBoxWindow = TimeSpan.FromSeconds(20);
+        private readonly HashSet<string> _absorbedKeys = new();
+
         public ApiService(string serverUrl)
         {
             _http = new HttpClient
@@ -144,7 +157,12 @@ namespace MasterAdmin
 
                         Status = "불량",
 
-                        ErrorType = e.Message ?? "",
+                        // 오류유형: 메시지 우선, 비어 있으면 에러코드, 그것도 없으면 인식실패 라벨.
+                        //   (QR/OCR 불량인데 message가 비어 전체 탭 오류유형이 공란이던 문제 보완)
+                        ErrorType = !string.IsNullOrWhiteSpace(e.Message) ? e.Message!
+                                  : !string.IsNullOrWhiteSpace(e.ErrorCode) ? e.ErrorCode!
+                                  : (e.ErrorCode != null && e.ErrorCode.Contains("QR")
+                                        ? "QR 인식 실패" : "OCR 인식 실패"),
 
                         ProcessingTime = 0,
 
@@ -155,8 +173,12 @@ namespace MasterAdmin
                     });
                 }
 
-                // 시간 기준 최신순 정렬
+                // 최근(SortLogRestoreWindow 이내) 행만 + 시간 기준 최신순 정렬.
+                //   옛 새벽 로그가 현재 테스트 화면에 끼어드는 것 방지.
+                //   라이브 소켓 행은 이 경로를 안 거치므로 영향 없음.
+                var sortLogCutoff = DateTime.Now - SortLogRestoreWindow;
                 mergedLogs = mergedLogs
+                    .Where(x => x.Timestamp >= sortLogCutoff)
                     .OrderByDescending(x => x.Timestamp)
                     .ToList();
 
@@ -166,6 +188,11 @@ namespace MasterAdmin
                 //  · 신규 DB 행만 시간순 위치에 삽입
                 Dispatch(() =>
                 {
+                    // 과거 이력 일괄 삽입 중 — FieldPage가 이 행들을 라이브 박스 앵커에
+                    //   병합하거나 _currentTrackingNumber를 옛 운송장으로 덮어쓰지 않게 막는다.
+                    vm.IsHistoryLoading = true;
+                    try
+                    {
                     var existingKeys = new HashSet<string>(
                         vm.SortingLogs
                           .Where(x => !x.IsLocal && x.MergeKey != null)
@@ -173,6 +200,10 @@ namespace MasterAdmin
 
                     foreach (var log in mergedLogs)
                     {
+                        // 같은-박스 합치기로 이미 흡수된 DB행은 다시 넣지 않는다(중복 재출현 방지).
+                        if (log.MergeKey != null && _absorbedKeys.Contains(log.MergeKey))
+                            continue;
+
                         if (log.MergeKey != null && existingKeys.Contains(log.MergeKey))
                         {
                             // 이미 있는 행이라도, 라이브 직후 비어 있던 이미지가 서버에 늦게
@@ -211,6 +242,11 @@ namespace MasterAdmin
                         if (log.MergeKey != null)
                             existingKeys.Add(log.MergeKey);
                     }
+                    }
+                    finally { vm.IsHistoryLoading = false; }
+
+                    // 같은 운송장이 여러 행(다중 스캔/정상→불량 분리)으로 들어온 경우 한 행으로 합침
+                    CollapseSameBoxRows(vm);
                 });
             }
             catch (Exception ex)
@@ -237,10 +273,10 @@ namespace MasterAdmin
                           .Where(x => x.MergeKey != null)
                           .Select(x => x.MergeKey!));
 
-                    // 같은 운송장에 박스검수가 여러 건이면 최신 1건만 전체 탭에 반영한다.
-                    //   (조회가 created_at DESC라 먼저 만나는 게 최신. 옛 행으로 최종판정을
-                    //    덮어써 '정상'인데 과거 불량검수의 오류유형/이미지가 남던 문제 방지)
-                    var restoredInvoices = new HashSet<string>();
+                    // 한 QR/OCR 행에는 박스검수 1건만 덧입힌다(가장 최근). 조회가 created_at DESC라
+                    //   먼저 만나는 게 최신 → 한 번 채운 행은 usedQrRows로 잠가 옛 검수가 덮어쓰지 못하게.
+                    //   (정상인데 과거 불량검수의 오류유형/이미지가 남던 문제 방지)
+                    var usedQrRows = new HashSet<SortingLog>();
 
                     foreach (var b in boxLogs)
                     {
@@ -248,37 +284,67 @@ namespace MasterAdmin
                         string? img = ToAbsoluteImageUrl(
                             !string.IsNullOrEmpty(b.ImageUrl) ? b.ImageUrl : b.ImagePath);
 
-                        // ── 전체 탭 복원: 같은 운송장의 QR/OCR 행 택배상태를 정상/불량으로 ──
-                        if (!string.IsNullOrEmpty(b.InvoiceNo) && restoredInvoices.Add(b.InvoiceNo))
+                        // ── 전체 탭 복원: 같은 박스 패스의 QR/OCR 행에 택배상태·최종판정을 덧입힌다 ──
+                        //   1순위: 운송장 일치(+시간 근접). 같은 운송장이라도 시간이 멀리 떨어진
+                        //          (과거 테스트·재사용 QR) 검수는 제외 → 옛 불량검수로 오염되는 것 방지.
+                        SortingLog? qrRow = null;
+                        if (!string.IsNullOrEmpty(b.InvoiceNo))
                         {
-                            var qrRow = vm.SortingLogs.FirstOrDefault(x =>
+                            qrRow = vm.SortingLogs.FirstOrDefault(x =>
                                 x.TrackingNumber == b.InvoiceNo &&
-                                (x.RecognitionType == "QR" || x.RecognitionType == "OCR"));
-                            // 시간 근접 매칭: 같은 박스 패스의 검수만 적용한다. 운송장이 같아도
-                            //   시간이 멀리 떨어진(과거 테스트·재사용 QR) 박스검수는 무시 →
-                            //   정상 택배가 새로고침 때 옛 불량검수(paper_crack·이미지)로
-                            //   덮어써지던 오염 방지.
-                            if (qrRow != null
-                                && (b.CreatedAt - qrRow.Timestamp).Duration() <= TimeSpan.FromSeconds(90))
-                            {
-                                string qrFinal = ComputeFinalResult(qrRow.Status, b.BoxStatus);
-                                if (qrRow.BoxStatus != b.BoxStatus) qrRow.BoxStatus = b.BoxStatus;
-                                if (qrRow.FinalResult != qrFinal) qrRow.FinalResult = qrFinal;
+                                (x.RecognitionType == "QR" || x.RecognitionType == "OCR") &&
+                                !usedQrRows.Contains(x) &&
+                                (b.CreatedAt - x.Timestamp).Duration() <= TimeSpan.FromSeconds(90));
+                        }
+                        //   2순위: 운송장 매칭 실패 시(박스가 OCR 인식 전에 이탈해 invoice_no가
+                        //          임시번호 'BOX-..'로 저장된 경우) — 아직 택배상태가 안 채워진
+                        //          QR/OCR 행 중 시간이 가장 가까운 행에 매칭한다. 이게 빠지면
+                        //          재시작 후 전체 탭에서 택배상태·최종판정이 비어 보였다.
+                        if (qrRow == null)
+                        {
+                            qrRow = vm.SortingLogs
+                                .Where(x => (x.RecognitionType == "QR" || x.RecognitionType == "OCR")
+                                            && !usedQrRows.Contains(x)
+                                            && (string.IsNullOrEmpty(x.BoxStatus) || x.BoxStatus == "대기중")
+                                            && (b.CreatedAt - x.Timestamp).Duration() <= TimeSpan.FromSeconds(90))
+                                .OrderBy(x => (b.CreatedAt - x.Timestamp).Duration())
+                                .FirstOrDefault();
+                        }
 
-                                // 최종판정이 불량일 때만 오류유형·이미지 표시. 정상/비닐이면 둘 다 비운다.
-                                //   (정상인데 과거 불량검수의 paper_crack·이미지가 남던 문제 방지)
-                                if (qrFinal == "불량")
+                        if (qrRow != null)
+                        {
+                            usedQrRows.Add(qrRow);
+
+                            string qrFinal = ComputeFinalResult(qrRow.Status, b.BoxStatus);
+                            if (qrRow.BoxStatus != b.BoxStatus) qrRow.BoxStatus = b.BoxStatus;
+                            if (qrRow.FinalResult != qrFinal) qrRow.FinalResult = qrFinal;
+
+                            // 최종판정이 불량일 때만 오류유형·이미지 표시. 정상/비닐이면 둘 다 비운다.
+                            //   (정상인데 과거 불량검수의 paper_crack·이미지가 남던 문제 방지)
+                            if (qrFinal == "불량")
+                            {
+                                // QR/OCR 불량 + 택배상태 불량 → 오류유형·이미지를 QR/OCR 우선.
+                                //   QR/OCR이 이미 가진 값(인식실패 사유·캡처 이미지)을 박스 검수값으로
+                                //   덮어쓰지 않고, QR/OCR 쪽이 비어 있을 때만 박스 값으로 보완한다.
+                                if (qrRow.Status == "불량" && b.BoxStatus == "불량")
                                 {
-                                    if (!string.IsNullOrEmpty(b.DefectClass) && qrRow.ErrorType != b.DefectClass)
+                                    if (string.IsNullOrEmpty(qrRow.ErrorType) && !string.IsNullOrEmpty(b.DefectClass))
                                         qrRow.ErrorType = b.DefectClass!;
                                     if (string.IsNullOrEmpty(qrRow.ImagePath) && !string.IsNullOrEmpty(img))
                                         qrRow.ImagePath = img;
                                 }
                                 else
                                 {
-                                    if (!string.IsNullOrEmpty(qrRow.ErrorType)) qrRow.ErrorType = "";
-                                    if (!string.IsNullOrEmpty(qrRow.ImagePath)) qrRow.ImagePath = "";
+                                    if (!string.IsNullOrEmpty(b.DefectClass) && qrRow.ErrorType != b.DefectClass)
+                                        qrRow.ErrorType = b.DefectClass!;
+                                    if (string.IsNullOrEmpty(qrRow.ImagePath) && !string.IsNullOrEmpty(img))
+                                        qrRow.ImagePath = img;
                                 }
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(qrRow.ErrorType)) qrRow.ErrorType = "";
+                                if (!string.IsNullOrEmpty(qrRow.ImagePath)) qrRow.ImagePath = "";
                             }
                         }
 
@@ -325,6 +391,9 @@ namespace MasterAdmin
                         vm.SortingLogs.Insert(idx, row);
                         existingKeys.Add(key);
                     }
+
+                    // 박스검수 반영 후, 같은 운송장 행을 한 행으로 합침(최종 불량 우선)
+                    CollapseSameBoxRows(vm);
                 });
             }
             catch (Exception ex)
@@ -333,20 +402,68 @@ namespace MasterAdmin
             }
         }
 
-        // 교차검증 최종판정 (FieldPage.SetBoxResult와 동일 규칙):
-        //   QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량. 비닐은 그대로.
-        //   QR/OCR 정보가 없으면 박스 상태를 그대로 최종판정으로.
+        // 같은 박스 한 행으로 합치기.
+        //   같은 운송장(QR/OCR 인식행)끼리 시간순으로 늘어놓고, 연속 간격이 SameBoxWindow
+        //   이내로 이어지는 묶음은 동일 박스로 보아 가장 이른 행 하나만 남기고 합친다.
+        //   최종판정은 '불량 우선'(어느 행이든 불량이면 대표행을 불량으로 = 최종 ROI 반영).
+        //   ※ 택배상태 단독 행(RecognitionType 빈 값)·앵커 임시행(FAIL-/BOX-)은 제외 → 택배상태 탭 보존.
+        private void CollapseSameBoxRows(MainViewModel vm)
+        {
+            var groups = vm.SortingLogs
+                .Where(r => (r.RecognitionType == "QR" || r.RecognitionType == "OCR")
+                            && !string.IsNullOrWhiteSpace(r.TrackingNumber)
+                            && !r.TrackingNumber.StartsWith("FAIL-")
+                            && !r.TrackingNumber.StartsWith("BOX-"))
+                .GroupBy(r => r.TrackingNumber)
+                .ToList();
+
+            foreach (var grp in groups)
+            {
+                var rows = grp.OrderBy(r => r.Timestamp).ToList();
+                if (rows.Count < 2) continue;
+
+                int i = 0;
+                while (i < rows.Count)
+                {
+                    var keep = rows[i];
+                    int j = i + 1;
+                    // 연속 간격이 window 이내인 동안 같은 박스로 묶는다(체이닝).
+                    while (j < rows.Count &&
+                           (rows[j].Timestamp - rows[j - 1].Timestamp) <= SameBoxWindow)
+                    {
+                        var dup = rows[j];
+
+                        // 불량 우선: 어느 행이든 불량이면 대표행을 불량으로.
+                        if (dup.Status == "불량") keep.Status = "불량";
+                        if (dup.BoxStatus == "불량") keep.BoxStatus = "불량";
+                        if (string.IsNullOrEmpty(keep.ErrorType) && !string.IsNullOrEmpty(dup.ErrorType))
+                            keep.ErrorType = dup.ErrorType;
+                        if (string.IsNullOrEmpty(keep.ImagePath) && !string.IsNullOrEmpty(dup.ImagePath))
+                            keep.ImagePath = dup.ImagePath;
+
+                        if (!string.IsNullOrEmpty(dup.MergeKey))
+                            _absorbedKeys.Add(dup.MergeKey!);   // 폴링 재삽입 방지
+
+                        vm.SortingLogs.Remove(dup);
+                        j++;
+                    }
+
+                    if (j > i + 1)
+                        keep.FinalResult = ComputeFinalResult(keep.Status, keep.BoxStatus);
+
+                    i = j;
+                }
+            }
+        }
+
+        // 교차검증 최종판정 (FieldPage.ComputeFinalResult와 동일 규칙):
+        //   ① QR/OCR 인식 결과(정상/불량) 없으면 → 대기중.
+        //   ② QR/OCR 불량 → 불량.  ③ QR/OCR 정상 → 박스 확정 불량일 때만 불량, 그 외 정상.
         private static string ComputeFinalResult(string? ocrStatus, string boxStatus)
         {
-            bool hasOcr = !string.IsNullOrEmpty(ocrStatus) && ocrStatus != "-" && ocrStatus != "비닐";
-            // 택배상태가 비닐이어도 QR/OCR 결과가 있으면 그걸로 최종판정.
-            //   QR/OCR 정상 → 정상, QR/OCR 불량 → 불량. QR/OCR 정보 없으면 비닐 그대로.
-            if (boxStatus == "비닐")
-                return hasOcr ? (ocrStatus == "정상" ? "정상" : "불량") : "비닐";
-            // 그 외: QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량. QR/OCR 없으면 박스 상태 그대로.
-            if (hasOcr)
-                return (ocrStatus == "정상" && boxStatus == "정상") ? "정상" : "불량";
-            return boxStatus;
+            if (ocrStatus != "정상" && ocrStatus != "불량") return "대기중";
+            if (ocrStatus == "불량") return "불량";
+            return boxStatus == "불량" ? "불량" : "정상";
         }
 
         private async Task LoadShippingLogsAsync(MainViewModel vm)
@@ -587,6 +704,13 @@ namespace MasterAdmin
                 {
                     var log = resp.GetValue<SortingLog>(0);
 
+                    // 라이브 emit엔 timestamp가 없어 Timestamp가 기본값(0001-01-01)이 된다.
+                    //   그대로 두면 박스 앵커에 병합되지 못한 단독 QR/OCR 행이 '오늘' 날짜필터에
+                    //   걸려 분류이력에 안 보인다(인식했는데 안 뜨는 현상). 수신 시각(현재)으로 채워
+                    //   오늘 행으로 표시되게 한다. (앵커에 병합되면 앵커의 시각을 그대로 쓰므로 무관)
+                    if (log.Timestamp == default || log.Timestamp.Year < 2000)
+                        log.Timestamp = DateTime.Now;
+
                     // Flask가 함께 보낸 이미지 URL 추출 (필드명 변형 모두 허용)
                     try
                     {
@@ -607,6 +731,13 @@ namespace MasterAdmin
 
                         // DB 새로고침 시 같은 행이 중복 추가되지 않도록 키 부여
                         log.MergeKey = "S" + log.Id;
+
+                        // 폴링(api/logs/sort)이 라이브 emit보다 먼저 도착해 같은 행을
+                        //   이미 넣었거나 앵커에 병합한 경우, 같은 키로 또 넣지 않는다.
+                        //   (id가 실제값(≠0)인 정상 행에만 적용 — 불량 행은 id=0이라 무관)
+                        if (log.Id != 0 &&
+                            vm.SortingLogs.Any(x => x.MergeKey == log.MergeKey))
+                            return;
 
                         vm.SortingLogs.Insert(0, log);
 
@@ -684,9 +815,23 @@ namespace MasterAdmin
 
                             if (target != null)
                             {
-                                target.ImagePath = fullImageUrl;
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[이미지] → {target.TrackingNumber}/{target.Status} : {fullImageUrl}");
+                                // QR/OCR가 불량인 행은 이미 QR/OCR 캡처 이미지를 갖고 있다.
+                                //   요청: QR/OCR 불량 + 택배상태 불량이면 이미지는 QR/OCR 이미지로 띄운다
+                                //   → 박스 검출 이미지로 덮어쓰지 않고 QR/OCR 이미지를 유지한다.
+                                //   (QR/OCR 이미지가 비어 있을 때만 박스 이미지로 보완)
+                                bool qrFailKeepsImage = target.Status == "불량"
+                                    && !string.IsNullOrEmpty(target.ImagePath);
+                                if (qrFailKeepsImage)
+                                {
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[이미지] QR/OCR 불량 이미지 유지 → {target.TrackingNumber} (박스 이미지 무시)");
+                                }
+                                else
+                                {
+                                    target.ImagePath = fullImageUrl;
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[이미지] → {target.TrackingNumber}/{target.Status} : {fullImageUrl}");
+                                }
                             }
                             else
                             {
@@ -844,7 +989,11 @@ namespace MasterAdmin
                             {
                                 if (!string.IsNullOrEmpty(defectClass))
                                     target.ErrorType = defectClass;
-                                if (!string.IsNullOrEmpty(fullImageUrl))
+                                // QR/OCR 불량 + 택배상태 불량이면 이미지는 QR/OCR 이미지로 유지
+                                //   (박스 검출 이미지로 덮어쓰지 않음). QR/OCR 이미지가 비었을 때만 보완.
+                                bool qrFailKeepsImage = target.Status == "불량"
+                                    && !string.IsNullOrEmpty(target.ImagePath);
+                                if (!qrFailKeepsImage && !string.IsNullOrEmpty(fullImageUrl))
                                 {
                                     target.ImagePath = fullImageUrl;
                                     System.Diagnostics.Debug.WriteLine(

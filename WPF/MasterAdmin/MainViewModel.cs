@@ -161,6 +161,13 @@ namespace MasterAdmin
         public Func<byte[]?>? GetFieldFrame { get; set; } // cam1 현장캠 프레임
 
         public ObservableCollection<SortingLog> SortingLogs { get; } = new();
+
+        // 폴링/새로고침으로 과거 이력 행을 일괄 삽입하는 동안 true.
+        //   이 동안 FieldPage.OnTrackingNumberUpdated가 옛 QR/OCR 이력 행을 '현재 박스
+        //   앵커'에 병합하거나 _currentTrackingNumber를 덮어쓰지 못하게 막는다.
+        //   (새로고침 시 옛 운송장 데이터가 현재 박스에 끌려들어오던 문제 방지)
+        public bool IsHistoryLoading { get; set; }
+
         public ObservableCollection<ShippingLog> ShippingLogs { get; } = new();
         public ObservableCollection<BlackboxEvent> BlackboxEvents { get; } = new();
         public ObservableCollection<LoginRecord> LoginRecords { get; } = new();

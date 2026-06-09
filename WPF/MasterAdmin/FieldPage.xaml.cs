@@ -99,6 +99,10 @@ namespace MasterAdmin
         //   이 값 미만의 paper_crack/paper_gap 검출은 false positive로 보고 무시(불량으로 안 침).
         private const double DEFECT_CONF_THRESHOLD = 0.70;
 
+        // ── 정상(박스) 채택 임계 인식률 ──────────────────────────────────
+        //   이 값 미만의 paper(정상 박스) 검출은 채택/표시 안 함 (ROI 화면에도 70% 이상만 노출).
+        private const double NORMAL_CONF_THRESHOLD = 0.70;
+
         // 공유 패스: 두 캠 중 하나라도 마지막으로 박스를 본 시각 (이탈 판단용)
         private DateTime _lastSeenTime = DateTime.MinValue;
 
@@ -142,18 +146,19 @@ namespace MasterAdmin
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            // ── 카메라 직접 연결 (USB) ────────────────────────────────────
-            // 다른 PC에서도 보이게 하려면 cam_stream_server.py 먼저 실행 후
-            // 아래 주석 해제하고 위 3줄 주석 처리
-            _cam1 = new CameraHelper(2, CamFieldImg, CamFieldPlaceholder);    // 현장캠
-            _cam2 = new CameraHelper(0, CamShippingImg, CamShippingPlaceholder); // 출고캠
+            // ── 현장/출고캠: 스트림 서버에서 받아온다 (방식 A) ───────────────
+            //   USB 카메라는 한 프로그램만 점유 가능 → 카메라는 cam_streamserver.py가
+            //   독점으로 잡고, WPF·안드로이드 앱·브라우저가 모두 같은 MJPEG 스트림을
+            //   받아본다. WPF는 받은 원본 위에 기존 불량 오버레이를 그대로 그리고(기능 유지),
+            //   YOLO 처리도 OnFrame 경로로 동일하게 동작한다.
+            //   ※ cam_streamserver.py(192.168.0.40:8082)가 켜져 있어야 한다.
+            //   ※ FlipHorizontally=true → USB 직접연결 때와 같은 좌우반전 유지
+            //     (화면·저장된 ROI·오버레이 좌표가 종전과 동일하게 맞도록).
+            string camHost = "192.168.0.40";
+            _cam1 = new CameraHelper($"http://{camHost}:8082/stream/field",    CamFieldImg,    CamFieldPlaceholder)    { FlipHorizontally = true }; // 현장캠
+            _cam2 = new CameraHelper($"http://{camHost}:8082/stream/shipping", CamShippingImg, CamShippingPlaceholder) { FlipHorizontally = true }; // 출고캠
             _camQr = new CameraHelper("http://192.168.0.21:8081/stream", CamQrImg, CamQrPlaceholder);
 
-            // -- 네트워크 스트리밍 사용 시 (cam_stream_server.py 실행 후 활성화) --
-            // string camHost = "192.168.0.40";
-            // _cam1  = new CameraHelper($"http://{camHost}:8082/stream/field",    CamFieldImg,    CamFieldPlaceholder);
-            // _cam2  = new CameraHelper($"http://{camHost}:8082/stream/shipping", CamShippingImg, CamShippingPlaceholder);
-            // _camQr = new CameraHelper("http://192.168.0.21:8081/stream",        CamQrImg,       CamQrPlaceholder);
             _cam1.Start();
             _cam2.Start();
             _camQr.Start();
@@ -190,9 +195,11 @@ namespace MasterAdmin
 
                 vm.TriggerRecording = reason =>
                 {
-                    string? videoPath = RecordJamVideo(reason);
-                    if (videoPath != null && vm.SortingLogs.Count > 0)
-                        vm.SortingLogs[0].ImagePath = videoPath;
+                    // 잼/불량 순간 영상은 blackbox\jam\ 에 .avi로 보관만 한다.
+                    //   ※ 이 경로를 로그 행 ImagePath에 넣지 않는다 — '이미지' 미리보기는
+                    //     BitmapImage라 .avi를 못 열고(영상), 녹화 중이면 파일이 잠겨
+                    //     "다른 프로세스가 사용 중" 오류가 났다. 행은 백엔드가 준 JPG를 유지.
+                    RecordJamVideo(reason);
                 };
 
                 // ★ 최신 프레임 제공 — 불량 감지 시 multipart 이미지 첨부용
@@ -499,6 +506,7 @@ namespace MasterAdmin
                 }
                 else
                 {
+                    if (det.Confidence < NORMAL_CONF_THRESHOLD) continue;   // 인식률 70% 미만 정상박스는 채택 안 함
                     sawBox = true; boxBbox = det.Bbox; boxPoly = det.Polygon; recogConf = det.Confidence;
                 }
             }
@@ -610,7 +618,12 @@ namespace MasterAdmin
             if (_passAnchorRow == null)
                 _passAnchorRow = CreateBoxAnchorRow(vm);
             if (_passAnchorRow.BoxStatus != boxStatus) _passAnchorRow.BoxStatus = boxStatus;
-            if (_passAnchorRow.ErrorType != boxErr) _passAnchorRow.ErrorType = boxErr;
+            // QR/OCR 불량 + 택배상태 불량이고 QR/OCR이 자체 오류유형을 가졌으면 오류유형은
+            //   QR/OCR 우선 → 박스 클래스(paper_crack 등)로 덮어쓰지 않는다.
+            bool qrOwnsErr = (_passAnchorRow.RecognitionType == "QR" || _passAnchorRow.RecognitionType == "OCR")
+                             && _passAnchorRow.Status == "불량" && boxStatus == "불량"
+                             && !string.IsNullOrEmpty(_passAnchorRow.ErrorType);
+            if (!qrOwnsErr && _passAnchorRow.ErrorType != boxErr) _passAnchorRow.ErrorType = boxErr;
 
             // ── 앵커 최종판정 재계산 ──────────────────────────────────────────
             //   QR/OCR이 이미 병합된 행이면 교차검증으로 FinalResult를 '다시' 계산한다.
@@ -690,20 +703,18 @@ namespace MasterAdmin
             return row;
         }
 
-        // 교차검증 최종판정:  QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량
-        //   비닐은 박스 판정 대상이 아니므로 비닐 그대로.
-        //   QR/OCR 정보가 없으면 박스 상태를 그대로 최종판정으로.
+        // 교차검증 최종판정 (실시간 교차)
+        //   ① QR/OCR 인식 결과(정상/불량)가 있어야 확정. 없으면(대기중·미인식) → 대기중.
+        //   ② QR/OCR 불량 → 무조건 불량.
+        //   ③ QR/OCR 정상 → 박스가 '확정 불량'일 때만 불량으로 강등.
+        //      박스 정상/비닐/대기중(미검출)은 정상 유지.
+        //   ※ ③ 덕분에: OCR/QR 정상인데 박스 미검출(대기중)이라고 대기중/불량으로 잘못
+        //     뜨지 않고, 택배상태가 실제 '불량'으로 확정될 때만 최종판정이 불량으로 바뀐다.
         private static string ComputeFinalResult(string? ocrStatus, string boxStatus)
         {
-            bool hasOcr = !string.IsNullOrEmpty(ocrStatus) && ocrStatus != "-" && ocrStatus != "비닐";
-            // 택배상태가 비닐이어도 QR/OCR 결과가 있으면 그걸로 최종판정.
-            //   QR/OCR 정상 → 정상, QR/OCR 불량 → 불량. QR/OCR 정보 없으면 비닐 그대로.
-            if (boxStatus == "비닐")
-                return hasOcr ? (ocrStatus == "정상" ? "정상" : "불량") : "비닐";
-            // 그 외: QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량. QR/OCR 없으면 박스 상태 그대로.
-            if (hasOcr)
-                return (ocrStatus == "정상" && boxStatus == "정상") ? "정상" : "불량";
-            return boxStatus;
+            if (ocrStatus != "정상" && ocrStatus != "불량") return "대기중";
+            if (ocrStatus == "불량") return "불량";
+            return boxStatus == "불량" ? "불량" : "정상";
         }
 
         // ── 불량 검출 순간 프레임을 메모리에 캡처 (디스크 저장은 이탈 시 최종판정에 따라) ─
@@ -770,7 +781,12 @@ namespace MasterAdmin
                         }
                         if (anchorRow != null)
                         {
-                            anchorRow.ImagePath = path;
+                            // QR/OCR 불량 + 택배상태 불량이고 QR/OCR이 자체 이미지를 가졌으면
+                            //   이미지는 QR/OCR 우선 → 박스 검출 이미지로 덮어쓰지 않는다.
+                            bool qrOwnsImg = (anchorRow.RecognitionType == "QR" || anchorRow.RecognitionType == "OCR")
+                                             && anchorRow.Status == "불량"
+                                             && !string.IsNullOrEmpty(anchorRow.ImagePath);
+                            if (!qrOwnsImg) anchorRow.ImagePath = path;
                             if (string.IsNullOrEmpty(anchorRow.ErrorType)) anchorRow.ErrorType = defectClass;
                         }
                     });
@@ -843,16 +859,11 @@ namespace MasterAdmin
                         else if (status == "정상")
                             _ = vm.PostYoloResultAsync(trackNo, false, "", 0);
 
-                        // QR/OCR이 끝내 병합되지 않은 앵커(대기중)는 박스 상태로 최종판정 확정.
-                        //   (이후 QR/OCR이 늦게 도착하면 MergeQrIntoAnchor가 교차검증으로 다시 덮어씀)
-                        if (_passAnchorRow != null
-                            && _passAnchorRow.RecognitionType != "QR"
-                            && _passAnchorRow.RecognitionType != "OCR"
-                            && (_passAnchorRow.FinalResult == "대기중"
-                                || string.IsNullOrEmpty(_passAnchorRow.FinalResult)))
-                        {
-                            _passAnchorRow.FinalResult = status;
-                        }
+                        // ※ QR/OCR이 병합되지 않은 앵커는 '최종판정'을 박스 상태로 확정하지 않는다.
+                        //   교차검증은 OCR/QR 인식 결과가 있어야 성립하므로, 인식이 없으면
+                        //   최종판정은 '대기중'으로 둔다 (택배상태 변화만으로 최종판정이 바뀌지 않게).
+                        //   QR/OCR이 늦게 도착하면 MergeQrIntoAnchor가 교차검증으로 확정한다.
+                        //   ※ 택배상태(박스 단독) 자체는 _currentBoxLog/택배상태 탭에 그대로 표시됨.
                     }
 
                     System.Diagnostics.Debug.WriteLine(
@@ -955,6 +966,20 @@ namespace MasterAdmin
                 if (log.IsBoxAnchor) continue;   // 앵커 행 자신은 스킵
                 if (log.RecognitionType != "QR" && log.RecognitionType != "OCR") continue;
 
+                var vm = DataContext as MainViewModel;
+
+                // 폴링/새로고침으로 과거 '오래된' 이력 행이 라이브 박스 앵커에 병합돼
+                //   둔갑하거나(새로고침 시 옛 002 데이터가 현재 박스로 끌려들어오던 문제),
+                //   _currentTrackingNumber를 옛 운송장으로 덮어써 박스상태 POST가 엉뚱한 옛
+                //   패키지에 붙던 문제를 막는다.
+                //   단, 이력 로딩이라도 '최근(현재 박스)' 행은 정상 병합해야 한다 — 현재 박스의
+                //   QR/OCR이 폴링으로 들어와도 앵커에 합쳐지게(과보정 방지). 라이브 소켓 행은
+                //   historyLoad=false라 항상 병합된다(소켓 페이로드엔 타임스탬프가 없어 staleness
+                //   판정 대상이 아님).
+                bool historyLoad = vm?.IsHistoryLoading ?? false;
+                bool isStale = historyLoad
+                               && (DateTime.Now - log.Timestamp) > TimeSpan.FromSeconds(120);
+
                 bool isFail = log.Status == "불량";   // QR/OCR 인식 실패(불량)
                 bool hasTrack = !string.IsNullOrWhiteSpace(log.TrackingNumber)
                                 && log.TrackingNumber != "-";
@@ -965,7 +990,8 @@ namespace MasterAdmin
 
                 // 다음 박스가 물려받을 현재 운송장번호는 '성공'일 때만 갱신.
                 //   실패면 건드리지 않아 이전 박스 운송장이 재사용되지 않게 한다.
-                if (hasTrack)
+                //   (오래된 이력 행은 제외 — 현재 운송장을 오염시키지 않게)
+                if (hasTrack && !isStale)
                 {
                     _currentTrackingNumber = log.TrackingNumber;
                     System.Diagnostics.Debug.WriteLine(
@@ -974,9 +1000,10 @@ namespace MasterAdmin
 
                 // 박스를 먼저 인식해 만든 "대기중" 앵커 행이 있으면 → 그 행에 QR/OCR 값을
                 //   합치고, 방금 들어온 이 QR/OCR 행은 제거(전체 탭에 한 행만 남도록).
-                if (DataContext is MainViewModel vm)
+                if (vm != null)
                 {
-                    var anchor = vm.SortingLogs.LastOrDefault(
+                    // 오래된 이력 행은 라이브 앵커에 병합하지 않는다(옛 행이 단독 이력으로 남게).
+                    var anchor = isStale ? null : vm.SortingLogs.LastOrDefault(
                         x => x.IsBoxAnchor && x.Status == "대기중");
                     if (anchor != null)
                     {
@@ -984,6 +1011,15 @@ namespace MasterAdmin
                         var toRemove = log;
                         // CollectionChanged 재진입 방지 위해 제거는 지연 실행
                         Dispatcher.BeginInvoke(new Action(() => vm.SortingLogs.Remove(toRemove)));
+                    }
+                    else
+                    {
+                        // 박스 앵커가 없으면(QR/OCR이 박스보다 먼저 인식됐거나 박스 미검출)
+                        //   이 QR/OCR 행 자체로 최종판정을 확정한다. 안 그러면 인식 정상인데
+                        //   최종판정이 '대기중'에 멈춘다. 박스 미검출이면 BoxStatus='대기중'이라
+                        //   ComputeFinalResult가 정상→정상으로 확정. 이후 박스 검수가 '불량'으로
+                        //   매칭되면(폴링/이탈) BoxStatus·최종판정이 교차검증으로 갱신된다.
+                        log.FinalResult = ComputeFinalResult(log.Status, log.BoxStatus);
                     }
                 }
             }
@@ -1003,10 +1039,21 @@ namespace MasterAdmin
             anchor.IsLocal = false;                        // 이제 DB행(QR/OCR) → 폴링 dedup 대상
             anchor.ProcessingTime = qr.ProcessingTime;
             anchor.Confidence = qr.Confidence;
-            if (!string.IsNullOrEmpty(qr.ErrorType) && anchor.BoxStatus != "불량")
-                anchor.ErrorType = qr.ErrorType;
-            if (!string.IsNullOrEmpty(qr.ImagePath) && string.IsNullOrEmpty(anchor.ImagePath))
-                anchor.ImagePath = qr.ImagePath;
+            // QR/OCR 불량 + 택배상태 불량 → 오류유형·이미지를 QR/OCR 우선
+            //   (박스 paper_crack·박스 이미지를 QR/OCR 값으로 덮어쓴다). QR/OCR 쪽이
+            //   비어 있으면 기존 박스 값을 그대로 둔다. 그 외 경우는 종전과 동일.
+            if (qr.Status == "불량" && anchor.BoxStatus == "불량")
+            {
+                if (!string.IsNullOrEmpty(qr.ErrorType)) anchor.ErrorType = qr.ErrorType;
+                if (!string.IsNullOrEmpty(qr.ImagePath)) anchor.ImagePath = qr.ImagePath;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(qr.ErrorType) && anchor.BoxStatus != "불량")
+                    anchor.ErrorType = qr.ErrorType;
+                if (!string.IsNullOrEmpty(qr.ImagePath) && string.IsNullOrEmpty(anchor.ImagePath))
+                    anchor.ImagePath = qr.ImagePath;
+            }
             // 최종판정 = QR/OCR 정상 AND 박스 정상 → 정상, 그 외 → 불량
             anchor.FinalResult = ComputeFinalResult(qr.Status, anchor.BoxStatus);
 
@@ -1127,7 +1174,12 @@ namespace MasterAdmin
             if ((DateTime.Now - st.DefectTime).TotalSeconds > DEFECT_SHOW_SECS) return;
             if (st.DefectResult.Detections.Length == 0) return;
 
-            var d = st.DefectResult.Detections[0];
+            // ROI 화면에도 70% 이상만 표시 — 임계 미만 불량 bbox는 그리지 않음
+            DetectionItem? d = null;
+            foreach (var cand in st.DefectResult.Detections)
+                if (cand.Confidence >= DEFECT_CONF_THRESHOLD) { d = cand; break; }
+            if (d == null) return;
+
             var green = new Scalar(0, 255, 0);
 
             // YOLO 좌표는 ROI 크롭 기준 → ROI 원점 더해서 복원
@@ -1483,10 +1535,21 @@ namespace MasterAdmin
                 // 택배상태 단독 로그(인식 없음) 여부 — 출고캠 YOLO만 판정한 박스 행
                 bool isBoxOnly = string.IsNullOrEmpty(l.RecognitionType);
 
+                // 박스에 합쳐지지 않은 '단독 인식실패' 행(택배상태 없음)은 전체 탭에서 숨김.
+                //   ① 폴링 에러로그(운송장 'FAIL-xxx')  ② 라이브 스캔실패(SCAN_TIMEOUT, 인식 '-')
+                //   ③ 박스 앵커에 못 합쳐진 라이브 QR/OCR 실패(빈 운송장)
+                //   모두 박스 앵커도 아니고 택배상태가 안 붙은 실패 → 한 박스당 한 행만 남도록
+                //   전체 탭에서만 숨긴다. (QR/OCR 실패 탭에는 해당 탭 조건으로 그대로 노출)
+                bool unmatchedFail = !l.IsBoxAnchor
+                                     && l.Status == "불량"
+                                     && !string.IsNullOrEmpty(l.RecognitionType)
+                                     && (string.IsNullOrEmpty(l.BoxStatus) || l.BoxStatus == "대기중");
+
                 // 상태 필터
-                //  · 전체: QR/OCR 행 + 박스 앵커 행(택배상태 먼저 뜬 행). 박스 단독 로그는 숨김
+                //  · 전체: QR/OCR 행 + 박스 앵커 행(택배상태 먼저 뜬 행). 박스 단독 로그·
+                //          박스 미매칭 단독실패는 숨김
                 //  · 택배상태: 박스 단독 로그만 (앵커 행 제외 → 로그대로 유지)
-                if (_sortFilter == "전체") return !isBoxOnly || l.IsBoxAnchor;
+                if (_sortFilter == "전체") return (!isBoxOnly || l.IsBoxAnchor) && !unmatchedFail;
                 if (_sortFilter == "QR인식실패") return l.RecognitionType == "QR" && l.Status == "불량";
                 if (_sortFilter == "OCR인식실패") return l.RecognitionType == "OCR" && l.Status == "불량";
                 if (_sortFilter == "택배상태") return isBoxOnly && !l.IsBoxAnchor;
