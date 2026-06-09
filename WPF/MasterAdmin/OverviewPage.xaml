@@ -108,9 +108,12 @@
             </Border>
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="로그인 기록" Style="{StaticResource SecTitle}"/>
-                    <TextBlock Text="{Binding LoginRecords.Count}" Style="{StaticResource BigNum}" Foreground="#A78BFA"/>
-                    <TextBlock Text="총 접속 이력" Style="{StaticResource SubLabel}"/>
+                    <TextBlock Text="공장 CCTV" Style="{StaticResource SecTitle}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="11" Height="11" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <TextBlock Text="실시간" Style="{StaticResource BigNum}" Foreground="#38BDF8"/>
+                    </StackPanel>
+                    <TextBlock Text="공장 전체 모니터링" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
             <Border Grid.Column="3" Style="{StaticResource Card}">
@@ -365,63 +368,33 @@
             </Grid>
 
 
-            <!-- ═ 로그인 기록 ═ -->
+            <!-- ═ 공장 전체 CCTV ═ -->
+            <!--   현우 노트북(192.168.0.39)의 cctv_stream.py가 송출하는 MJPEG 스트림을
+                   QR캠과 동일한 네트워크 URL 방식으로 표시. 컨트롤 이름(CamCctvImg/
+                   CamCctvPlaceholder)은 OverviewPage.xaml.cs의 변수와 일치시켜야 함. -->
             <Border Grid.Column="1" Style="{StaticResource Card}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="▌ " Foreground="#A78BFA" FontSize="14"/>
-                            <TextBlock Text="로그인 기록" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-                        </StackPanel>
-                        <Button Style="{StaticResource SmallBtn}" Content="초기화"
-                    Command="{Binding ClearLogsCommand}" CommandParameter="login"
-                    HorizontalAlignment="Right"/>
-                    </Grid>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding LoginRecords}" Style="{StaticResource DG}">
-                        <DataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DGH}"/>
-                        </DataGrid.ColumnHeaderStyle>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="시각"   Binding="{Binding Timestamp, StringFormat=MM/dd HH:mm}" Width="75"/>
-                            <DataGridTextColumn Header="사용자" Binding="{Binding UserName}"                            Width="48"/>
-                            <DataGridTextColumn Header="권한"   Binding="{Binding Role}"                                Width="65"/>
-                            <DataGridTemplateColumn Header="구분" Width="50">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Border CornerRadius="3" Padding="4,1" HorizontalAlignment="Center"
-                            Background="{Binding Action, Converter={StaticResource StatusToColor}}">
-                                            <TextBlock Text="{Binding Action}" FontSize="10" Foreground="White"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="*"/>
-                            <DataGridTemplateColumn Header="결과" Width="36">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text"       Value="✓"/>
-                                                    <Setter Property="Foreground" Value="#4ADE80"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Success}" Value="False">
-                                                            <Setter Property="Text"       Value="✗"/>
-                                                            <Setter Property="Foreground" Value="#F87171"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
+                        <TextBlock Text="공장 전체 CCTV" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                        <TextBlock Text="  LIVE" FontSize="10" Foreground="#4ADE80" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Border Grid.Row="1" Background="#050E1A" CornerRadius="6" ClipToBounds="True">
+                        <Grid>
+                            <Image x:Name="CamCctvImg" Stretch="Uniform"/>
+                            <StackPanel x:Name="CamCctvPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="📷" FontSize="26" HorizontalAlignment="Center"/>
+                                <TextBlock Text="공장 전체 CCTV" FontSize="11" Foreground="#38BDF8"
+                                           HorizontalAlignment="Center" Margin="0,5,0,0" FontFamily="Consolas"/>
+                                <TextBlock Text="CCTV 연결 대기" FontSize="9" Foreground="#475569"
+                                           HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
