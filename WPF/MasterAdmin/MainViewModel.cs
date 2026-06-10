@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -174,6 +176,84 @@ namespace MasterAdmin
         public ObservableCollection<CarStatus> Cars { get; } = new();
         public ObservableCollection<BoxInspectionLog> BoxInspectionLogs { get; } = new();
 
+        // ── 통계 차트 (총괄 페이지) — Flask /api/stats/overview 로 갱신 ──────
+        public ObservableCollection<RegionBar> RegionBars { get; } = new();
+        public ObservableCollection<string> RegionAxisLabels { get; } = new();
+        public ObservableCollection<DonutSlice> RecognitionSlices { get; } = new();
+        public ObservableCollection<DonutSlice> ErrorTypeSlices { get; } = new();
+
+        // 막대 색 (XAML 바인딩용 — StatsCharts와 단일 출처 유지)
+        public Brush RegionNormalBrush => StatsCharts.RegionNormalBrush;
+        public Brush RegionDefectBrush => StatsCharts.RegionDefectBrush;
+
+        // 도넛 중앙 표기
+        private string _recognitionCenterLabel = "인식";
+        public string RecognitionCenterLabel
+        {
+            get => _recognitionCenterLabel;
+            set { _recognitionCenterLabel = value; OnPropertyChanged(); }
+        }
+        private string _recognitionCenterValue = "-";
+        public string RecognitionCenterValue
+        {
+            get => _recognitionCenterValue;
+            set { _recognitionCenterValue = value; OnPropertyChanged(); }
+        }
+        private string _errorCenterValue = "0";
+        public string ErrorCenterValue
+        {
+            get => _errorCenterValue;
+            set { _errorCenterValue = value; OnPropertyChanged(); }
+        }
+
+        // 상단 요약 카드용 — 차트와 같은 통계 payload에서 뽑아 카드·차트 숫자를 일치시킨다.
+        //   총 처리 = 모든 권역 (정상+불량) 합,  오류 건수 = 오류유형 합.
+        private int _statsTotalCount;
+        public int StatsTotalCount
+        {
+            get => _statsTotalCount;
+            set { _statsTotalCount = value; OnPropertyChanged(); }
+        }
+        private int _statsErrorCount;
+        public int StatsErrorCount
+        {
+            get => _statsErrorCount;
+            set { _statsErrorCount = value; OnPropertyChanged(); }
+        }
+
+        // ApiService가 /api/stats/overview 수신 후 호출 (UI 스레드).
+        //   건수를 받아 막대 높이·도넛 호·비율을 계산해 컬렉션을 통째로 교체한다.
+        public void ApplyStats(StatsOverview stats)
+        {
+            int axisMax = StatsCharts.RegionAxisMax(stats.Regions);
+            var bars = StatsCharts.BuildRegionBars(stats.Regions, axisMax);
+            var axisLabels = StatsCharts.RegionAxisLabels(axisMax);
+            var recog = StatsCharts.BuildRecognition(stats.Recognition);
+            var errors = StatsCharts.BuildErrorTypes(stats.ErrorTypes);
+
+            RegionBars.Clear();
+            foreach (var b in bars) RegionBars.Add(b);
+
+            RegionAxisLabels.Clear();
+            foreach (var l in axisLabels) RegionAxisLabels.Add(l);
+
+            RecognitionSlices.Clear();
+            foreach (var s in recog) RecognitionSlices.Add(s);
+
+            ErrorTypeSlices.Clear();
+            foreach (var s in errors) ErrorTypeSlices.Add(s);
+
+            // 도넛 중앙: 인식방식은 비중 큰 쪽, 오류유형은 총 건수
+            var top = recog.OrderByDescending(s => s.Percent).FirstOrDefault();
+            RecognitionCenterLabel = top?.Label ?? "인식";
+            RecognitionCenterValue = top != null ? $"{top.Percent:0}%" : "-";
+            ErrorCenterValue = stats.ErrorTypes.Sum(e => e.Count).ToString();
+
+            // 상단 카드도 같은 payload로 — 카드와 차트가 같은 숫자를 가리키게 한다.
+            StatsTotalCount = stats.Regions.Sum(r => r.Normal + r.Defect);
+            StatsErrorCount = stats.ErrorTypes.Sum(e => e.Count);
+        }
+
         public ICommand NavigateToFieldCommand { get; }
         public ICommand NavigateToOverviewCommand { get; }
         public ICommand ToggleEmergencyCommand { get; }
@@ -322,6 +402,13 @@ namespace MasterAdmin
                 {
                     await _api.LoadSortLogsAsync(this);
                     await _api.LoadBoxLogsAsync(this);   // 택배상태(박스검수) 복원
+                }
+
+                // 2초마다 통계 차트 새로고침 (총괄 페이지) — 소켓 이벤트(sorting_log_added)로
+                //   즉시 갱신되지만, 누락 대비 폴링도 짧게 유지(실시간 체감 ↑).
+                if (_tick % 2 == 0)
+                {
+                    await _api.LoadStatsAsync(this);
                 }
 
                 // 2초마다 자동차 상태 새로고침

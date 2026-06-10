@@ -192,6 +192,24 @@ namespace MasterAdmin
             => throw new NotImplementedException();
     }
 
+    // 컬렉션 개수(Count) → Visibility.
+    //   기본: count==0 일 때 Visible (빈 상태 안내문구용).
+    //   ConverterParameter="invert": count>0 일 때 Visible (실제 데이터 있을 때만 표시).
+    public class CountToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int n = value is int i ? i : 0;
+            bool empty = n == 0;
+            bool invert = (parameter as string) == "invert";
+            bool show = invert ? !empty : empty;
+            return show ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     // ImagePath가 null/빈 문자열이면 Collapsed, 값 있으면 Visible
     public class HasValueToVisibilityConverter : IValueConverter
     {

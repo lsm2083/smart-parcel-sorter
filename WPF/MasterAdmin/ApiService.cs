@@ -60,7 +60,8 @@ namespace MasterAdmin
                 LoadShippingLogsAsync(vm),
                 LoadBlackboxEventsAsync(vm),
                 LoadLoginRecordsAsync(vm),
-                LoadCarStatusAsync(vm)
+                LoadCarStatusAsync(vm),
+                LoadStatsAsync(vm)
             );
 
             // 분류이력은 순서가 중요하다: QR/OCR(성공·실패) 행을 먼저 채운 뒤
@@ -530,6 +531,33 @@ namespace MasterAdmin
         }
 
 
+        // ── REST: 통계(총괄 페이지 차트) ──────────────────────────────────
+        //   건수만 받아 막대/도넛 계산은 vm.ApplyStats에서 수행.
+        //   · 오늘만        : api/stats/overview        ← 상단 카드와 기간을 맞추기 위해 오늘 기준 사용
+        //   · 전체 누적(발표용): api/stats/overview/all
+        private const string StatsEndpoint = "api/stats/overview";
+
+        private bool _statsBusy = false;
+        public async Task LoadStatsAsync(MainViewModel vm)
+        {
+            // 폴링 + 소켓 이벤트가 겹쳐 집계 쿼리가 중복 호출되는 것 방지
+            if (_statsBusy) return;
+            _statsBusy = true;
+            try
+            {
+                var json = await _http.GetStringAsync(StatsEndpoint);
+                var stats = Deserialize<StatsOverview>(json);
+                if (stats == null) return;
+
+                Dispatch(() => vm.ApplyStats(stats));
+            }
+            catch (Exception ex)
+            {
+                Log("LoadStats", ex);
+            }
+            finally { _statsBusy = false; }
+        }
+
         // ── REST: 아두이노 자동차 상태 ────────────────────────────────────
         public async Task LoadCarStatusAsync(MainViewModel vm)
         {
@@ -744,6 +772,9 @@ namespace MasterAdmin
                         if (vm.SortingLogs.Count > 60)
                             vm.SortingLogs.RemoveAt(vm.SortingLogs.Count - 1);
                     });
+
+                    // 새 분류 로그 → 통계(총 처리/오류 건수) 즉시 갱신 (폴링 대기 없이 실시간)
+                    _ = LoadStatsAsync(vm);
                 }
                 catch (Exception ex)
                 {

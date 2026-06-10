@@ -94,15 +94,15 @@
 
             <Border Grid.Column="0" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="총 이벤트" Style="{StaticResource SecTitle}"/>
-                    <TextBlock Text="{Binding BlackboxEvents.Count}" Style="{StaticResource BigNum}" Foreground="#FB923C"/>
-                    <TextBlock Text="블랙박스 기록" Style="{StaticResource SubLabel}"/>
+                    <TextBlock Text="총 처리" Style="{StaticResource SecTitle}"/>
+                    <TextBlock Text="{Binding StatsTotalCount}" Style="{StaticResource BigNum}" Foreground="#FB923C"/>
+                    <TextBlock Text="오늘 처리 건수" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="오류 건수" Style="{StaticResource SecTitle}"/>
-                    <TextBlock Text="{Binding DeviceStatus.TodayErrorCount}" Style="{StaticResource BigNum}" Foreground="#F87171"/>
+                    <TextBlock Text="{Binding StatsErrorCount}" Style="{StaticResource BigNum}" Foreground="#F87171"/>
                     <TextBlock Text="오늘 발생" Style="{StaticResource SubLabel}"/>
                 </StackPanel>
             </Border>
@@ -160,10 +160,19 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
-                                <TextBlock Text="권역별 분류 현황" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
-                            </StackPanel>
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <TextBlock Text="▌ " Foreground="#38BDF8" FontSize="14"/>
+                                    <TextBlock Text="권역별 분류 현황" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource FgPrimary}"/>
+                                </StackPanel>
+                                <!-- 범례 — 제목 옆 오른쪽 -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Rectangle Width="10" Height="10" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                    <TextBlock Text="정상" FontSize="9" Foreground="{DynamicResource FgMuted}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                    <Rectangle Width="10" Height="10" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                    <TextBlock Text="불량" FontSize="9" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
 
                             <!-- 막대 그래프 -->
                             <Grid Grid.Row="1">
@@ -181,21 +190,20 @@
                                         <!-- 그래프 영역 -->
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Y축 라벨 -->
-                                    <Grid Grid.Column="0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                            <RowDefinition/>
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Text="100" FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <TextBlock Grid.Row="1" Text="80"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <TextBlock Grid.Row="2" Text="60"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <TextBlock Grid.Row="3" Text="40"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <TextBlock Grid.Row="4" Text="20"  FontSize="8" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                    </Grid>
+                                    <!-- Y축 라벨 (RegionAxisLabels: 위→아래 5개, 통계 최대값 기준) -->
+                                    <ItemsControl Grid.Column="0" ItemsSource="{Binding RegionAxisLabels}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="5"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" FontSize="8" Foreground="{DynamicResource FgMuted}"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,3,0"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
 
                                     <!-- 그래프 -->
                                     <Grid Grid.Column="1">
@@ -215,80 +223,57 @@
                                             <Rectangle Grid.Row="4" Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderLine}" Opacity="0.5"/>
                                         </Grid>
 
-                                        <!-- 막대 그래프 (정상/불량 쌓기) -->
-                                        <UniformGrid Rows="1" Margin="4,0">
-                                            <!-- 서울 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="72" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="72" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="8" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 경기 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="85" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="85" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="12" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 인천 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="48" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="48" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="5" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 부산 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="63" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="63" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="9" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 대구 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="38" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="38" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="4" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 광주 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="29" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="29" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="3" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                            <!-- 대전 -->
-                                            <StackPanel VerticalAlignment="Bottom" Margin="2,0">
-                                                <Border Height="44" Background="#38BDF8" CornerRadius="3,3,0,0">
-                                                    <TextBlock Text="44" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
-                                                </Border>
-                                                <Border Height="6" Background="#F87171" CornerRadius="0"/>
-                                            </StackPanel>
-                                        </UniformGrid>
+                                        <!-- 막대 그래프 (정상/불량 쌓기) — RegionBars 바인딩 -->
+                                        <!--   값 있는 권역만 받아 그 개수만큼 막대를 그린다(현재 서울/경기도 2개). -->
+                                        <ItemsControl ItemsSource="{Binding RegionBars}" Margin="4,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="1"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel VerticalAlignment="Bottom" Margin="2,0">
+                                                        <Border Height="{Binding NormalHeight}"
+                                                                Background="{Binding DataContext.RegionNormalBrush, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CornerRadius="3,3,0,0">
+                                                            <TextBlock Text="{Binding Normal}" FontSize="8" Foreground="White"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2"/>
+                                                        </Border>
+                                                        <Border Height="{Binding DefectHeight}"
+                                                                Background="{Binding DataContext.RegionDefectBrush, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CornerRadius="0">
+                                                            <TextBlock Text="{Binding Defect}" FontSize="8" Foreground="White"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- 빈 상태: 통계 데이터(권역)가 아직 없을 때 -->
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Visibility="{Binding RegionBars.Count, Converter={StaticResource CountToVis}}">
+                                            <TextBlock Text="데이터 없음" FontSize="12" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(통계 API 연결 대기)" FontSize="9" Foreground="#475569" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Grid>
 
-                                <!-- X축 라벨 -->
-                                <UniformGrid Grid.Row="1" Rows="1" Margin="32,3,4,0">
-                                    <TextBlock Text="서울" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="경기" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="인천" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="부산" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="대구" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="광주" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="대전" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
-                                </UniformGrid>
+                                <!-- X축 라벨 (RegionBars 바인딩 — 막대와 같은 권역 순서) -->
+                                <ItemsControl Grid.Row="1" ItemsSource="{Binding RegionBars}" Margin="32,3,4,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
-
-                            <!-- 범례 -->
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
-                                <Rectangle Width="10" Height="10" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                <TextBlock Text="정상" FontSize="9" Foreground="{DynamicResource FgMuted}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <Rectangle Width="10" Height="10" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                <TextBlock Text="불량" FontSize="9" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center"/>
-                            </StackPanel>
                         </Grid>
                     </Border>
 
@@ -310,56 +295,81 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- 인식 방식 비율 -->
+                                <!-- 인식 방식 비율 — RecognitionSlices 바인딩 (도넛 조각은 C#에서 계산) -->
                                 <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="인식 방식" FontSize="10" Foreground="{DynamicResource FgMuted}"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                                     <!-- 원형 시각화 (WPF Path) -->
                                     <Grid Width="80" Height="80">
-                                        <Ellipse Width="80" Height="80" Fill="#38BDF8"/>
-                                        <Path Fill="#4ADE80" Data="M 40,40 L 40,0 A 40,40 0 0 1 80,40 Z"/>
+                                        <ItemsControl ItemsSource="{Binding RecognitionSlices}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Path Fill="{Binding Brush}" Data="{Binding Geometry}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                         <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
-                                        <TextBlock Text="QR" FontSize="9" Foreground="#38BDF8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
-                                        <TextBlock Text="62%" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                        <!-- 중앙 라벨/값 — 세로로 쌓아 겹침 방지 -->
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Visibility="{Binding RecognitionSlices.Count, Converter={StaticResource CountToVis}, ConverterParameter=invert}">
+                                            <TextBlock Text="{Binding RecognitionCenterLabel}" FontSize="9" Foreground="#38BDF8" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding RecognitionCenterValue}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                        <!-- 빈 상태 -->
+                                        <TextBlock Text="데이터 없음" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding RecognitionSlices.Count, Converter={StaticResource CountToVis}}"/>
                                     </Grid>
-                                    <StackPanel Margin="0,8,0,0">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                                            <Rectangle Width="8" Height="8" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                            <TextBlock Text="QR  62%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                                            <Rectangle Width="8" Height="8" Fill="#4ADE80" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                            <TextBlock Text="OCR 38%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                                        </StackPanel>
-                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding RecognitionSlices}" Margin="0,8,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                                    <Rectangle Width="8" Height="8" Fill="{Binding Brush}" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding Display}" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
 
-                                <!-- 오류 유형 비율 -->
+                                <!-- 오류 유형 비율 — ErrorTypeSlices 바인딩 (조각 수는 백엔드가 결정) -->
                                 <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="오류 유형" FontSize="10" Foreground="{DynamicResource FgMuted}"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                                     <Grid Width="80" Height="80">
-                                        <Ellipse Width="80" Height="80" Fill="#F87171"/>
-                                        <Path Fill="#FB923C" Data="M 40,40 L 40,0 A 40,40 0 0 1 72,60 Z"/>
-                                        <Path Fill="#FBBF24" Data="M 40,40 L 72,60 A 40,40 0 0 1 10,65 Z"/>
+                                        <ItemsControl ItemsSource="{Binding ErrorTypeSlices}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Path Fill="{Binding Brush}" Data="{Binding Geometry}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                         <Ellipse Width="50" Height="50" Fill="{DynamicResource BgCard}"/>
-                                        <TextBlock Text="오류" FontSize="9" Foreground="#F87171" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0"/>
-                                        <TextBlock Text="분석" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                        <!-- 중앙 라벨/값 — 세로로 쌓아 겹침 방지 -->
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Visibility="{Binding ErrorTypeSlices.Count, Converter={StaticResource CountToVis}, ConverterParameter=invert}">
+                                            <TextBlock Text="오류" FontSize="9" Foreground="#F87171" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding ErrorCenterValue}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource FgPrimary}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                        <!-- 빈 상태 -->
+                                        <TextBlock Text="데이터 없음" FontSize="9" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding ErrorTypeSlices.Count, Converter={StaticResource CountToVis}}"/>
                                     </Grid>
-                                    <StackPanel Margin="0,8,0,0">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                                            <Rectangle Width="8" Height="8" Fill="#F87171" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                            <TextBlock Text="인식실패 45%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                                            <Rectangle Width="8" Height="8" Fill="#FB923C" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                            <TextBlock Text="권역오류 32%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
-                                            <Rectangle Width="8" Height="8" Fill="#FBBF24" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
-                                            <TextBlock Text="타이밍   23%" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
-                                        </StackPanel>
-                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding ErrorTypeSlices}" Margin="0,8,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2">
+                                                    <Rectangle Width="8" Height="8" Fill="{Binding Brush}" RadiusX="2" RadiusY="2" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding Display}" FontSize="9" Foreground="{DynamicResource FgMuted}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
                             </Grid>
                         </Grid>
